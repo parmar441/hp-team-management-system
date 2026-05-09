@@ -1,0 +1,124 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --color-primary: oklch(0.45 0.18 260);
+  --color-primary-foreground: oklch(0.98 0.004 250);
+  --color-background: oklch(0.98 0.004 250);
+  --color-foreground: oklch(0.18 0.02 255);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.18 0.02 255);
+  --color-muted: oklch(0.95 0.008 250);
+  --color-muted-foreground: oklch(0.55 0.015 255);
+  --color-border: oklch(0.88 0.01 255);
+  --color-destructive: oklch(0.58 0.22 25);
+  --color-destructive-foreground: oklch(0.98 0.004 250);
+  --color-sidebar: oklch(0.17 0.03 258);
+  --color-sidebar-foreground: oklch(0.88 0.015 255);
+  --color-sidebar-accent: oklch(0.25 0.04 258);
+  --color-sidebar-accent-foreground: oklch(0.95 0.01 255);
+  --color-input: oklch(0.88 0.01 255);
+  --color-ring: oklch(0.45 0.18 260);
+  --color-accent: oklch(0.95 0.008 250);
+  --color-accent-foreground: oklch(0.18 0.02 255);
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.18 0.02 255);
+  --color-secondary: oklch(0.95 0.008 250);
+  --color-secondary-foreground: oklch(0.18 0.02 255);
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Playfair Display", Georgia, serif;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+}
+
+.dark {
+  --color-background: oklch(0.12 0.02 255);
+  --color-foreground: oklch(0.92 0.008 250);
+  --color-card: oklch(0.16 0.025 258);
+  --color-card-foreground: oklch(0.92 0.008 250);
+  --color-muted: oklch(0.22 0.03 258);
+  --color-muted-foreground: oklch(0.65 0.015 255);
+  --color-border: oklch(0.28 0.03 258);
+  --color-input: oklch(0.28 0.03 258);
+  --color-primary: oklch(0.6 0.18 260);
+  --color-primary-foreground: oklch(0.98 0.004 250);
+  --color-secondary: oklch(0.22 0.03 258);
+  --color-secondary-foreground: oklch(0.92 0.008 250);
+  --color-accent: oklch(0.22 0.03 258);
+  --color-accent-foreground: oklch(0.92 0.008 250);
+  --color-destructive: oklch(0.65 0.25 25);
+  --color-destructive-foreground: oklch(0.98 0.004 250);
+  --color-popover: oklch(0.16 0.025 258);
+  --color-popover-foreground: oklch(0.92 0.008 250);
+}
+
+* {
+  box-sizing: border-box;
+  border-color: var(--color-border);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  -webkit-font-smoothing: antialiased;
+  font-size: 16px;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
+
+input,
+textarea,
+select {
+  font-size: 16px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted-foreground);
+}
+
+/* Loading skeleton animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-muted) 25%,
+    var(--color-border) 50%,
+    var(--color-muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
+}

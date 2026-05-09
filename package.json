@@ -1,0 +1,16 @@
+{
+  "name": "accommodation-seva",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter server dev\" \"pnpm --filter client dev\"",
+    "build": "pnpm --filter client build && pnpm --filter server build",
+    "db:generate": "pnpm --filter server db:generate",
+    "db:migrate": "pnpm --filter server db:migrate",
+    "db:seed": "pnpm --filter server db:seed",
+    "test": "pnpm --filter server test"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
