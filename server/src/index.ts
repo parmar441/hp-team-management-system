@@ -37,23 +37,15 @@ const writeLimiter = rateLimit({ windowMs: 60_000, max: 30 });
 const bulkLimiter = rateLimit({ windowMs: 60_000, max: 5 });
 const exportLimiter = rateLimit({ windowMs: 60_000, max: 3 });
 
-// ── Middleware ─────────────────────────────────────────────────────────────────
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "http://localhost:4173",
-  ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
-];
+// ── Serve React frontend static files (before any other middleware) ────────────
+const clientIndex = join(CLIENT_DIST, "index.html");
+const hasClientBuild = fs.existsSync(clientIndex);
+if (hasClientBuild) {
+  app.use(express.static(CLIENT_DIST));
+}
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, server-to-server)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    callback(new Error(`CORS: origin ${origin} not allowed`));
-  },
-  credentials: true,
-}));
+// ── Middleware ─────────────────────────────────────────────────────────────────
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
@@ -102,11 +94,8 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString(), db: mongoose.connection.readyState === 1 ? "connected" : "disconnected" });
 });
 
-// ── Serve React frontend (production) ─────────────────────────────────────────
-const clientIndex = join(CLIENT_DIST, "index.html");
-if (fs.existsSync(clientIndex)) {
-  app.use(express.static(CLIENT_DIST));
-  // SPA fallback — all non-API routes return index.html
+// ── SPA fallback (production) ──────────────────────────────────────────────────
+if (hasClientBuild) {
   app.get("*", (_req, res) => {
     res.sendFile(clientIndex, (err) => {
       if (err) res.status(404).send("Not found");
