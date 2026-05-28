@@ -154,9 +154,10 @@ router.post("/bulk", requireAdmin, upload.single("file"), async (req: Request, r
     const rows: any[] = req.body.people || [];
     const results = [];
     for (const row of rows) {
-      const zone = await classifyPersonZone(row);
-      const area = zone ? await classifyPersonArea(row, zone) : null;
-      const person = await Person.create({ ...row, zone: zone ?? undefined, area: area ?? undefined });
+      const clean = sanitizePerson(row);
+      const zone = await classifyPersonZone(clean);
+      const area = zone ? await classifyPersonArea(clean, zone) : null;
+      const person = await Person.create({ ...clean, zone: zone ?? undefined, area: area ?? undefined });
       results.push(person);
     }
     res.status(201).json({ created: results.length, people: results });

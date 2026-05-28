@@ -75,6 +75,21 @@ app.get("/api/export/assignments-pdf", exportLimiter, async (req, res) => {
   }
 });
 
+// ── 404 handler ───────────────────────────────────────────────────────────────
+app.use("/api/*", (_req, res) => {
+  res.status(404).json({ error: "API route not found" });
+});
+
+// ── Global error handler ───────────────────────────────────────────────────────
+app.use((err: any, _req: any, res: any, _next: any) => {
+  // MongoDB duplicate key
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyPattern || {})[0] || "field";
+    return res.status(400).json({ error: `Duplicate value: ${field} already exists` });
+  }
+  res.status(500).json({ error: err.message || "Internal server error" });
+});
+
 // ── Health ────────────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString(), db: mongoose.connection.readyState === 1 ? "connected" : "disconnected" });

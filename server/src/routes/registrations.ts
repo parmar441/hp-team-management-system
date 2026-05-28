@@ -5,6 +5,18 @@ import { classifyPersonZone, classifyPersonArea } from "../helpers/zoneClassifie
 
 const router = Router();
 
+// Strip empty strings from optional fields to avoid unique sparse index violations
+function sanitizePerson(data: Record<string, any>) {
+  const optionalFields = ["memberId", "familyId", "email", "phone", "city", "state", "country", "mandal", "category", "note", "lastName"];
+  const cleaned = { ...data };
+  for (const field of optionalFields) {
+    if (cleaned[field] === "" || cleaned[field] === null) {
+      delete cleaned[field];
+    }
+  }
+  return cleaned;
+}
+
 // GET /api/registrations
 router.get("/", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   try {
@@ -24,7 +36,7 @@ router.get("/", requireAdmin, async (req: Request, res: Response): Promise<void>
 // POST /api/registrations
 router.post("/", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   try {
-    const data = req.body;
+    const data = sanitizePerson(req.body);
     const zone = await classifyPersonZone(data);
     const area = zone ? await classifyPersonArea(data, zone) : null;
     const person = await Person.create({ ...data, zone: zone ?? undefined, area: area ?? undefined });
@@ -40,12 +52,13 @@ router.post("/bulk", requireAdmin, async (req: Request, res: Response): Promise<
     const { people } = req.body as { people: any[] };
     const withZones = await Promise.all(
       people.map(async (p) => {
-        const zone = await classifyPersonZone(p);
-        const area = zone ? await classifyPersonArea(p, zone) : null;
-        return { ...p, zone: zone ?? undefined, area: area ?? undefined };
+        const clean = sanitizePerson(p);
+        const zone = await classifyPersonZone(clean);
+        const area = zone ? await classifyPersonArea(clean, zone) : null;
+        return { ...clean, zone: zone ?? undefined, area: area ?? undefined };
       })
     );
-    const created = await Person.insertMany(withZones);
+    const created = await Person.insertMany(withZones, { ordered: false });
     res.status(201).json({ created: created.length, people: created });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -57,7 +70,7 @@ router.put("/:id", requireAdmin, async (req: Request, res: Response): Promise<vo
   try {
     const old = await Person.findById(req.params.id);
     if (!old) { res.status(404).json({ error: "Not found" }); return; }
-    const data = req.body;
+    const data = sanitizePerson(req.body);
     const zone = await classifyPersonZone({ ...old.toObject(), ...data });
     const area = zone ? await classifyPersonArea({ ...old.toObject(), ...data }, zone) : null;
     const person = await Person.findByIdAndUpdate(
