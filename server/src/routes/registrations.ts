@@ -37,8 +37,8 @@ router.get("/", requireAdmin, async (req: Request, res: Response): Promise<void>
 router.post("/", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   try {
     const data = sanitizePerson(req.body);
-    const zone = await classifyPersonZone(data);
-    const area = zone ? await classifyPersonArea(data, zone) : null;
+    const zone = await classifyPersonZone(data as any);
+    const area = zone ? await classifyPersonArea(data as any, zone) : null;
     const person = await Person.create({ ...data, zone: zone ?? undefined, area: area ?? undefined });
     res.status(201).json(person);
   } catch (err: any) {
@@ -53,8 +53,8 @@ router.post("/bulk", requireAdmin, async (req: Request, res: Response): Promise<
     const withZones = await Promise.all(
       people.map(async (p) => {
         const clean = sanitizePerson(p);
-        const zone = await classifyPersonZone(clean);
-        const area = zone ? await classifyPersonArea(clean, zone) : null;
+        const zone = await classifyPersonZone(clean as any);
+        const area = zone ? await classifyPersonArea(clean as any, zone) : null;
         return { ...clean, zone: zone ?? undefined, area: area ?? undefined };
       })
     );
@@ -71,8 +71,9 @@ router.put("/:id", requireAdmin, async (req: Request, res: Response): Promise<vo
     const old = await Person.findById(req.params.id);
     if (!old) { res.status(404).json({ error: "Not found" }); return; }
     const data = sanitizePerson(req.body);
-    const zone = await classifyPersonZone({ ...old.toObject(), ...data });
-    const area = zone ? await classifyPersonArea({ ...old.toObject(), ...data }, zone) : null;
+    const merged = { ...old.toObject(), ...data };
+    const zone = await classifyPersonZone(merged as any);
+    const area = zone ? await classifyPersonArea(merged as any, zone) : null;
     const person = await Person.findByIdAndUpdate(
       req.params.id,
       { ...data, zone: zone ?? undefined, area: area ?? undefined },

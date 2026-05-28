@@ -55,9 +55,9 @@ router.get("/", scopeByRole, async (req: Request, res: Response): Promise<void> 
 });
 
 // Strip empty strings from optional fields so unique sparse indexes aren't violated
-function sanitizePerson(data: Record<string, any>) {
+function sanitizePerson(data: Record<string, any>): Record<string, any> & { _id?: any } {
   const optionalFields = ["memberId", "familyId", "email", "phone", "city", "state", "country", "mandal", "category", "note", "lastName"];
-  const cleaned = { ...data };
+  const cleaned: Record<string, any> = { ...data };
   for (const field of optionalFields) {
     if (cleaned[field] === "" || cleaned[field] === null) {
       delete cleaned[field];
@@ -70,8 +70,8 @@ function sanitizePerson(data: Record<string, any>) {
 router.post("/", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   try {
     const data = sanitizePerson(req.body);
-    const zone = await classifyPersonZone(data);
-    const area = zone ? await classifyPersonArea(data, zone) : null;
+    const zone = await classifyPersonZone(data as any);
+    const area = zone ? await classifyPersonArea(data as any, zone) : null;
     const person = await Person.create({ ...data, zone: zone ?? undefined, area: area ?? undefined });
     await logAudit({
       userId: req.user!.id,
@@ -94,8 +94,9 @@ router.put("/:id", requireAdmin, async (req: Request, res: Response): Promise<vo
     if (!old) { res.status(404).json({ error: "Not found" }); return; }
 
     const data = sanitizePerson(req.body);
-    const zone = await classifyPersonZone({ ...old.toObject(), ...data });
-    const area = zone ? await classifyPersonArea({ ...old.toObject(), ...data }, zone) : null;
+    const merged = { ...old.toObject(), ...data };
+    const zone = await classifyPersonZone(merged as any);
+    const area = zone ? await classifyPersonArea(merged as any, zone) : null;
     const person = await Person.findByIdAndUpdate(
       req.params.id,
       { ...data, zone: zone ?? undefined, area: area ?? undefined },
@@ -155,8 +156,8 @@ router.post("/bulk", requireAdmin, upload.single("file"), async (req: Request, r
     const results = [];
     for (const row of rows) {
       const clean = sanitizePerson(row);
-      const zone = await classifyPersonZone(clean);
-      const area = zone ? await classifyPersonArea(clean, zone) : null;
+      const zone = await classifyPersonZone(clean as any);
+      const area = zone ? await classifyPersonArea(clean as any, zone) : null;
       const person = await Person.create({ ...clean, zone: zone ?? undefined, area: area ?? undefined });
       results.push(person);
     }
