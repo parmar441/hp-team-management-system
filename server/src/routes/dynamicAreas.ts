@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { DynamicArea } from "../models/DynamicArea.js";
 import { DynamicAreaRule } from "../models/DynamicAreaRule.js";
+import { DynamicZone } from "../models/DynamicZone.js";
 import { AreaAssignment } from "../models/AreaAssignment.js";
 import { User } from "../models/User.js";
 import { LeadCredential } from "../models/LeadCredential.js";
@@ -8,6 +9,16 @@ import { Person } from "../models/Person.js";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
 import { reapplyAllAreaRules } from "../helpers/zoneClassifier.js";
 import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
+
+// Resolve zoneId: accepts either an ObjectId string or a zone name string
+async function resolveZoneId(zoneId: any): Promise<mongoose.Types.ObjectId | undefined> {
+  if (!zoneId || zoneId === "") return undefined;
+  if (mongoose.Types.ObjectId.isValid(zoneId)) return new mongoose.Types.ObjectId(zoneId);
+  // It's a zone name — look up the ID
+  const zone = await DynamicZone.findOne({ name: zoneId });
+  return zone ? zone._id as mongoose.Types.ObjectId : undefined;
+}
 
 const router = Router();
 
@@ -29,8 +40,11 @@ router.get("/", requireAuth, async (_req: Request, res: Response): Promise<void>
 // POST /api/dynamic-areas
 router.post("/", requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const area = await DynamicArea.create(req.body);
-    res.status(201).json(area);
+    const { name, zoneId } = req.body;
+    const resolvedZoneId = await resolveZoneId(zoneId);
+    const area = await DynamicArea.create({ name, zoneId: resolvedZoneId });
+    const populated = await DynamicArea.findById(area._id).populate("zoneId");
+    res.status(201).json(populated);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
@@ -39,7 +53,11 @@ router.post("/", requireAuth, async (req: Request, res: Response): Promise<void>
 // PUT /api/dynamic-areas/:id
 router.put("/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const area = await DynamicArea.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const { name, zoneId } = req.body;
+    const resolvedZoneId = await resolveZoneId(zoneId);
+    const update: Record<string, any> = { name };
+    if (resolvedZoneId !== undefined) update.zoneId = resolvedZoneId;
+    const area = await DynamicArea.findByIdAndUpdate(req.params.id, update, { new: true }).populate("zoneId");
     if (!area) { res.status(404).json({ error: "Not found" }); return; }
     res.json(area);
   } catch (err: any) {
