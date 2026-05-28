@@ -1,42 +1,19 @@
 services:
-  # ── Backend (Express API) ──────────────────────────────────────────────────
+  # ── Single service: Express serves both API + React frontend ──────────────────
   - type: web
-    name: hp-team-management-server
+    name: hp-team-management-system
     runtime: node
     plan: free
-    rootDir: server
-    buildCommand: npm install -g pnpm && pnpm install && pnpm build
-    startCommand: node dist/index.js
+    buildCommand: npx pnpm install --frozen-lockfile=false && cd client && npx pnpm install --frozen-lockfile=false && npx pnpm build && cd ../server && npx pnpm build
+    startCommand: node server/dist/index.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
       - key: MONGODB_URI
-        sync: false   # you fill this in on Render dashboard
+        sync: false
       - key: JWT_SECRET
-        sync: false   # you fill this in on Render dashboard
-      - key: CLIENT_URL
-        sync: false   # set to your Static Site URL after it's created
+        sync: false
       - key: OPENAI_API_KEY
         sync: false
-
-  # ── Frontend (React / Vite static site) ───────────────────────────────────
-  - type: web
-    name: hp-team-management-client
-    runtime: static
-    plan: free
-    rootDir: client
-    buildCommand: npm install -g pnpm && pnpm install && pnpm build
-    staticPublishPath: dist
-    envVars:
-      - key: VITE_API_URL
-        sync: false   # set to your Web Service URL (e.g. https://hp-team-management-server.onrender.com)
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: no-cache
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html

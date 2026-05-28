@@ -4,6 +4,14 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import { rateLimit } from "express-rate-limit";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+import fs from "fs";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+// client/dist is two levels up from server/dist/index.js
+const CLIENT_DIST = join(__dirname, "../../client/dist");
 
 import authRoutes from "./routes/auth.js";
 import peopleRoutes from "./routes/people.js";
@@ -75,14 +83,13 @@ app.get("/api/export/assignments-pdf", exportLimiter, async (req, res) => {
   }
 });
 
-// ── 404 handler ───────────────────────────────────────────────────────────────
+// ── API 404 handler ────────────────────────────────────────────────────────────
 app.use("/api/*", (_req, res) => {
   res.status(404).json({ error: "API route not found" });
 });
 
 // ── Global error handler ───────────────────────────────────────────────────────
 app.use((err: any, _req: any, res: any, _next: any) => {
-  // MongoDB duplicate key
   if (err.code === 11000) {
     const field = Object.keys(err.keyPattern || {})[0] || "field";
     return res.status(400).json({ error: `Duplicate value: ${field} already exists` });
@@ -94,6 +101,15 @@ app.use((err: any, _req: any, res: any, _next: any) => {
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString(), db: mongoose.connection.readyState === 1 ? "connected" : "disconnected" });
 });
+
+// ── Serve React frontend (production) ─────────────────────────────────────────
+if (fs.existsSync(CLIENT_DIST)) {
+  app.use(express.static(CLIENT_DIST));
+  // SPA fallback — all non-API routes return index.html
+  app.get("*", (_req, res) => {
+    res.sendFile(join(CLIENT_DIST, "index.html"));
+  });
+}
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 async function start() {
