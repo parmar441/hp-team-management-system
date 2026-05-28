@@ -45,7 +45,12 @@ router.get("/my-assignments", requireAuth, async (req: Request, res: Response): 
 
 // POST /api/auth/logout
 router.post("/logout", (_req: Request, res: Response): void => {
-  res.clearCookie("session", { httpOnly: true, sameSite: "lax" });
+  const isProd = process.env.NODE_ENV === "production";
+  res.clearCookie("session", {
+    httpOnly: true,
+    sameSite: isProd ? "none" : "lax",
+    secure: isProd,
+  });
   res.json({ success: true });
 });
 
@@ -81,9 +86,11 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
       role: user.role,
     });
 
+    const isProd = process.env.NODE_ENV === "production";
     res.cookie("session", token, {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: isProd ? "none" : "lax",
+      secure: isProd,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -126,9 +133,11 @@ router.get("/oauth/callback", async (req: Request, res: Response): Promise<void>
       role: user.role,
     });
 
+    const isProdOAuth = process.env.NODE_ENV === "production";
     res.cookie("session", token, {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: isProdOAuth ? "none" : "lax",
+      secure: isProdOAuth,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -171,9 +180,11 @@ router.post("/local-login", async (req: Request, res: Response): Promise<void> =
       role: user.role,
     });
 
+    const isProdLocal = process.env.NODE_ENV === "production";
     res.cookie("session", token, {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: isProdLocal ? "none" : "lax",
+      secure: isProdLocal,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
