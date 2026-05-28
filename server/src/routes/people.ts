@@ -54,10 +54,22 @@ router.get("/", scopeByRole, async (req: Request, res: Response): Promise<void> 
   }
 });
 
+// Strip empty strings from optional fields so unique sparse indexes aren't violated
+function sanitizePerson(data: Record<string, any>) {
+  const optionalFields = ["memberId", "familyId", "email", "phone", "city", "state", "country", "mandal", "category", "note", "lastName"];
+  const cleaned = { ...data };
+  for (const field of optionalFields) {
+    if (cleaned[field] === "" || cleaned[field] === null) {
+      delete cleaned[field];
+    }
+  }
+  return cleaned;
+}
+
 // POST /api/people
 router.post("/", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   try {
-    const data = req.body;
+    const data = sanitizePerson(req.body);
     const zone = await classifyPersonZone(data);
     const area = zone ? await classifyPersonArea(data, zone) : null;
     const person = await Person.create({ ...data, zone: zone ?? undefined, area: area ?? undefined });
@@ -81,7 +93,7 @@ router.put("/:id", requireAdmin, async (req: Request, res: Response): Promise<vo
     const old = await Person.findById(req.params.id);
     if (!old) { res.status(404).json({ error: "Not found" }); return; }
 
-    const data = req.body;
+    const data = sanitizePerson(req.body);
     const zone = await classifyPersonZone({ ...old.toObject(), ...data });
     const area = zone ? await classifyPersonArea({ ...old.toObject(), ...data }, zone) : null;
     const person = await Person.findByIdAndUpdate(
