@@ -1,10 +1,11 @@
 services:
-  # ── Single service: Express serves both API + React frontend ──────────────────
+  # Single service: Express serves both API + React frontend
   - type: web
     name: hp-team-management-system
     runtime: node
     plan: free
-    buildCommand: npx pnpm install --frozen-lockfile=false && cd client && npx pnpm install --frozen-lockfile=false && npx pnpm build && cd ../server && npx pnpm build
+    rootDir: ""
+    buildCommand: npx pnpm@9 install --frozen-lockfile=false && npx pnpm@9 --filter client install --frozen-lockfile=false && npx pnpm@9 --filter client build && npx pnpm@9 --filter server build
     startCommand: node server/dist/index.js
     envVars:
       - key: NODE_ENV

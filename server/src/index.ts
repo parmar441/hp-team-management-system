@@ -103,12 +103,17 @@ app.get("/api/health", (_req, res) => {
 });
 
 // ── Serve React frontend (production) ─────────────────────────────────────────
-if (fs.existsSync(CLIENT_DIST)) {
+const clientIndex = join(CLIENT_DIST, "index.html");
+if (fs.existsSync(clientIndex)) {
   app.use(express.static(CLIENT_DIST));
   // SPA fallback — all non-API routes return index.html
   app.get("*", (_req, res) => {
-    res.sendFile(join(CLIENT_DIST, "index.html"));
+    res.sendFile(clientIndex, (err) => {
+      if (err) res.status(404).send("Not found");
+    });
   });
+} else {
+  console.warn(`⚠️  client/dist not found at ${CLIENT_DIST} — frontend not served`);
 }
 
 // ── Start ─────────────────────────────────────────────────────────────────────
