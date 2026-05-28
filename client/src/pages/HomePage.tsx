@@ -1,279 +1,222 @@
-import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/contexts/AuthContext";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Users, UserCheck, UsersRound, Building2, Key } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useDashboardStats, useTreeStats } from "../hooks/useDashboard";
+import { useMe } from "../hooks/useAuth";
+import { Users, UsersRound, Hotel, ClipboardList, TrendingUp, MapPin, Activity, ArrowUpRight } from "lucide-react";
 
-function PipelineStep({
-  label,
-  count,
-  total,
-  color,
-  icon: Icon,
-  isLast = false,
+function StatCard({
+  label, value, icon, sub, color, trend,
 }: {
   label: string;
-  count: number;
-  total: number;
+  value?: number | string;
+  icon: React.ReactNode;
+  sub?: string;
   color: string;
-  icon: React.ElementType;
-  isLast?: boolean;
+  trend?: string;
 }) {
-  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  const loading = value === undefined;
   return (
-    <div className="flex items-center gap-2">
-      <div className={cn("flex flex-col items-center p-4 rounded-xl border min-w-[130px]", color)}>
-        <Icon className="h-5 w-5 mb-1" />
-        <span className="text-2xl font-bold">{count.toLocaleString()}</span>
-        <span className="text-xs font-medium mt-0.5">{label}</span>
-        <span className="text-xs opacity-70">{pct}%</span>
+    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between mb-4">
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>
+          {icon}
+        </div>
+        {trend && (
+          <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
+            <ArrowUpRight className="w-3 h-3" />
+            {trend}
+          </span>
+        )}
       </div>
-      {!isLast && <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+      <div>
+        {loading ? (
+          <div className="h-8 w-24 bg-gray-100 rounded-lg animate-pulse mb-1" />
+        ) : (
+          <p className="text-3xl font-bold text-gray-900 mb-1">{value}</p>
+        )}
+        <p className="text-sm font-medium text-gray-600">{label}</p>
+        {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+      </div>
     </div>
   );
 }
 
-const ZONE_COLORS: Record<string, string> = {
-  North: "bg-blue-100 text-blue-700",
-  South: "bg-emerald-100 text-emerald-700",
-  East: "bg-amber-100 text-amber-700",
-  West: "bg-purple-100 text-purple-700",
-  Central: "bg-rose-100 text-rose-700",
-};
-
-export default function HomePage() {
-  const { user } = useAuth();
-  const { data: enhanced, isLoading } = trpc.dashboard.enhancedStats.useQuery();
-
-  if (user?.role === "zone_lead") {
-    return <TeamLeadDashboard />;
-  }
-
-  if (isLoading) {
-    return (
-      <div className="p-6 space-y-6">
-        <Skeleton className="h-8 w-64" />
-        <div className="flex gap-2">
-          {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-28 w-32" />
-          ))}
-        </div>
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-48 w-full" />
-      </div>
-    );
-  }
-
-  const d = enhanced;
-  if (!d) return null;
-
-  const total = d.totalPeople;
+function ZoneCard({ zone }: { zone: any }) {
+  const total = zone.areas?.reduce((sum: number, a: any) => sum + a.count, 0) || 0;
+  const colors = ["bg-indigo-500", "bg-purple-500", "bg-blue-500", "bg-cyan-500", "bg-teal-500", "bg-emerald-500"];
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold font-display">Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Overview of the accommodation pipeline
-        </p>
+    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+            <MapPin className="w-4 h-4 text-indigo-600" />
+          </div>
+          <div>
+            <p className="font-semibold text-gray-900 text-sm">{zone.zone || "Unassigned"}</p>
+            {zone.isDefault && (
+              <span className="text-xs text-gray-400">Default Zone</span>
+            )}
+          </div>
+        </div>
+        <span className="text-2xl font-bold text-gray-900">{total}</span>
       </div>
 
-      {/* Pipeline Funnel */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Workflow Pipeline</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2 items-center">
-            <PipelineStep
-              label="Total People"
-              count={d.totalPeople}
-              total={total}
-              color="bg-slate-100 text-slate-700 border-slate-200"
-              icon={Users}
-            />
-            <PipelineStep
-              label="ACO Players"
-              count={d.acoCount}
-              total={total}
-              color="bg-blue-50 text-blue-700 border-blue-200"
-              icon={UserCheck}
-            />
-            <PipelineStep
-              label="In Teams"
-              count={d.assignedToTeamCount}
-              total={total}
-              color="bg-amber-50 text-amber-700 border-amber-200"
-              icon={UsersRound}
-            />
-            <PipelineStep
-              label="Hotel Assigned"
-              count={d.filledSlots}
-              total={total}
-              color="bg-purple-50 text-purple-700 border-purple-200"
-              icon={Building2}
-            />
-            <PipelineStep
-              label="Room Assigned"
-              count={d.roomAssigned ?? 0}
-              total={total}
-              color="bg-emerald-50 text-emerald-700 border-emerald-200"
-              icon={Key}
-              isLast
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {zone.areas && zone.areas.length > 0 && (
+        <div className="space-y-2">
+          {zone.areas.map((area: any, i: number) => {
+            const pct = total > 0 ? (area.count / total) * 100 : 0;
+            return (
+              <div key={area._id || i}>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-gray-600">{area._id || "No Area"}</span>
+                  <span className="font-medium text-gray-800">{area.count}</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${colors[i % colors.length]}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
-      {/* Zone Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Zone Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-2 font-semibold">Zone</th>
-                  <th className="text-right py-2 font-semibold">Total People</th>
-                  <th className="text-right py-2 font-semibold">ACO Yes</th>
-                  <th className="text-right py-2 font-semibold">In Teams</th>
-                  <th className="text-right py-2 font-semibold">Hotel Assigned</th>
-                  <th className="text-right py-2 font-semibold">Unassigned</th>
-                </tr>
-              </thead>
-              <tbody>
-                {d.zoneTeamComparison.map((z) => (
-                  <tr key={z.zone} className="border-b border-border/50 hover:bg-muted/50">
-                    <td className="py-2">
-                      <Badge
-                        className={cn("text-xs", ZONE_COLORS[z.zone])}
-                        variant="outline"
-                      >
-                        {z.zone}
-                      </Badge>
-                    </td>
-                    <td className="text-right py-2">{z.people}</td>
-                    <td className="text-right py-2">{z.acoCount}</td>
-                    <td className="text-right py-2">{z.teams}</td>
-                    <td className="text-right py-2">{z.assigned}</td>
-                    <td className="text-right py-2">
-                      <span className={z.unassigned > 0 ? "text-amber-600 font-medium" : ""}>
-                        {z.unassigned}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Hotel Overview */}
-      {d.hotelOccupancy.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Hotel Overview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-2 font-semibold">Hotel Name</th>
-                    <th className="text-right py-2 font-semibold">Total Slots</th>
-                    <th className="text-right py-2 font-semibold">Filled</th>
-                    <th className="text-right py-2 font-semibold">Remaining</th>
-                    <th className="text-left py-2 font-semibold pl-4">Zone Breakdown</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {d.hotelOccupancy.map((h) => (
-                    <tr key={h.name} className="border-b border-border/50 hover:bg-muted/50">
-                      <td className="py-2 font-medium">{h.name}</td>
-                      <td className="text-right py-2">{h.total}</td>
-                      <td className="text-right py-2">{h.filled}</td>
-                      <td className="text-right py-2">
-                        <span className={h.total - h.filled > 0 ? "text-emerald-600 font-medium" : "text-muted-foreground"}>
-                          {h.total - h.filled}
-                        </span>
-                      </td>
-                      <td className="py-2 pl-4">
-                        <div className="flex flex-wrap gap-1">
-                          {Object.entries(h.zoneSlots).map(([zone, count]) => (
-                            <Badge
-                              key={zone}
-                              className={cn("text-xs", ZONE_COLORS[zone])}
-                              variant="outline"
-                            >
-                              {zone}: {count}
-                            </Badge>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+      {(!zone.areas || zone.areas.length === 0) && (
+        <p className="text-xs text-gray-400 text-center py-2">No people assigned yet</p>
       )}
     </div>
   );
 }
 
-function TeamLeadDashboard() {
-  const { data: stats, isLoading } = trpc.teamLead.stats.useQuery();
-  const { data: zones } = trpc.teamLead.myZones.useQuery();
+export default function HomePage() {
+  const { data: statsData, isLoading } = useDashboardStats();
+  const { data: treeData, isLoading: treeLoading } = useTreeStats();
+  const { data: meData } = useMe();
 
-  if (isLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}
-        </div>
-      </div>
-    );
-  }
+  const user = meData?.user;
+  const stats = statsData;
+  const tree = treeData?.tree ?? [];
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold font-display">Zone Dashboard</h1>
-        <div className="flex flex-wrap gap-2 mt-2">
-          {(zones ?? []).map((z) => (
-            <Badge key={z} className={cn("text-sm", ZONE_COLORS[z])} variant="outline">
-              {z} Zone
-            </Badge>
-          ))}
+    <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {greeting}, {(user?.name || user?.email || "User").split(" ")[0]}
+          </h1>
+          <p className="text-gray-500 mt-1 flex items-center gap-2">
+            <Activity className="w-4 h-4 text-emerald-500" />
+            System is live — {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+          </p>
         </div>
+        <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 capitalize">
+          {user?.role?.replace(/_/g, " ") || "User"}
+        </span>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: "Total People", value: stats?.totalPeople ?? 0, icon: Users, color: "text-slate-700" },
-          { label: "ACO Players", value: stats?.stay ?? 0, icon: UserCheck, color: "text-blue-600" },
-          { label: "In Teams", value: stats?.assignedToTeams ?? 0, icon: UsersRound, color: "text-amber-600" },
-          { label: "Teams", value: stats?.totalTeams ?? 0, icon: Building2, color: "text-purple-600" },
-        ].map((s) => (
-          <Card key={s.label}>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <s.icon className={cn("h-6 w-6", s.color)} />
-                <div>
-                  <p className="text-2xl font-bold">{s.value}</p>
-                  <p className="text-xs text-muted-foreground">{s.label}</p>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          label="Total People"
+          value={isLoading ? undefined : stats?.totalPeople ?? 0}
+          icon={<Users className="w-6 h-6 text-indigo-600" />}
+          color="bg-indigo-50"
+          sub="Registered members"
+        />
+        <StatCard
+          label="ACO Players"
+          value={isLoading ? undefined : stats?.acoPlayers ?? 0}
+          icon={<TrendingUp className="w-6 h-6 text-emerald-600" />}
+          color="bg-emerald-50"
+          sub={`${stats?.nonAcoPlayers ?? 0} non-ACO players`}
+        />
+        <StatCard
+          label="Teams Formed"
+          value={isLoading ? undefined : stats?.totalTeams ?? 0}
+          icon={<UsersRound className="w-6 h-6 text-blue-600" />}
+          color="bg-blue-50"
+          sub="Active teams"
+        />
+        <StatCard
+          label="Hotels"
+          value={isLoading ? undefined : stats?.totalHotels ?? 0}
+          icon={<Hotel className="w-6 h-6 text-orange-600" />}
+          color="bg-orange-50"
+          sub={`${stats?.assignedSlots ?? 0} slots assigned`}
+        />
+      </div>
+
+      {/* ACO Progress Bar */}
+      {!isLoading && stats && (stats.totalPeople ?? 0) > 0 && (
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-semibold text-gray-900">ACO vs Non-ACO Breakdown</h3>
+              <p className="text-sm text-gray-400">Distribution across all registered members</p>
+            </div>
+            <ClipboardList className="w-5 h-5 text-gray-400" />
+          </div>
+          <div className="space-y-3">
+            {[
+              { label: "ACO Players", count: stats.acoPlayers ?? 0, color: "bg-indigo-500", textColor: "text-indigo-600" },
+              { label: "Non-ACO", count: stats.nonAcoPlayers ?? 0, color: "bg-gray-300", textColor: "text-gray-500" },
+            ].map((item) => {
+              const pct = stats.totalPeople ? (item.count / stats.totalPeople) * 100 : 0;
+              return (
+                <div key={item.label}>
+                  <div className="flex justify-between text-sm mb-1.5">
+                    <span className="font-medium text-gray-700">{item.label}</span>
+                    <span className={`font-semibold ${item.textColor}`}>{item.count} ({pct.toFixed(0)}%)</span>
+                  </div>
+                  <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${item.color}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
                 </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Zone/Area Breakdown */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Zone Breakdown</h2>
+            <p className="text-sm text-gray-500">People distribution across configured zones</p>
+          </div>
+          <MapPin className="w-5 h-5 text-gray-400" />
+        </div>
+
+        {treeLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <div className="h-32 bg-gray-50 rounded-xl animate-pulse" />
               </div>
-            </CardContent>
-          </Card>
-        ))}
+            ))}
+          </div>
+        ) : tree.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {tree.map((zone: any) => <ZoneCard key={zone.zone} zone={zone} />)}
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+              <MapPin className="w-7 h-7 text-gray-400" />
+            </div>
+            <h3 className="font-semibold text-gray-700 mb-1">No zones configured</h3>
+            <p className="text-sm text-gray-400">Go to <strong>Zones</strong> in the sidebar to set up dynamic zones and areas.</p>
+          </div>
+        )}
       </div>
     </div>
   );

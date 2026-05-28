@@ -1,10 +1,9 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -13,12 +12,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/trpc": {
-        target: "http://localhost:4500",
-        changeOrigin: true,
-      },
       "/api": {
-        target: "http://localhost:4500",
+        target: "http://localhost:3000",
         changeOrigin: true,
       },
     },

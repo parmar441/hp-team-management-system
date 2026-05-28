@@ -3,28 +3,28 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+          "border-transparent bg-indigo-100 text-indigo-700",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "border-transparent bg-gray-100 text-gray-700",
         destructive:
-          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
-        outline: "text-foreground",
-        blue: "border-transparent bg-blue-100 text-blue-700",
-        pink: "border-transparent bg-pink-100 text-pink-700",
-        teal: "border-transparent bg-teal-100 text-teal-700",
-        amber: "border-transparent bg-amber-100 text-amber-700",
-        orange: "border-transparent bg-orange-100 text-orange-700",
+          "border-transparent bg-red-100 text-red-700",
+        outline: "border-gray-200 text-gray-700",
+        blue: "border-transparent bg-blue-50 text-blue-700",
+        pink: "border-transparent bg-pink-50 text-pink-700",
+        teal: "border-transparent bg-teal-50 text-teal-700",
+        amber: "border-transparent bg-amber-50 text-amber-700",
+        orange: "border-transparent bg-orange-50 text-orange-700",
         slate: "border-transparent bg-slate-100 text-slate-700",
-        purple: "border-transparent bg-purple-100 text-purple-700",
-        green: "border-transparent bg-green-100 text-green-700",
-        emerald: "border-transparent bg-emerald-100 text-emerald-700",
-        indigo: "border-transparent bg-indigo-100 text-indigo-700",
-        rose: "border-transparent bg-rose-100 text-rose-700",
+        purple: "border-transparent bg-purple-50 text-purple-700",
+        green: "border-transparent bg-green-50 text-green-700",
+        emerald: "border-transparent bg-emerald-50 text-emerald-700",
+        indigo: "border-transparent bg-indigo-50 text-indigo-700",
+        rose: "border-transparent bg-rose-50 text-rose-700",
       },
     },
     defaultVariants: {

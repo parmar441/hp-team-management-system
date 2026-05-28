@@ -1,301 +1,164 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { toast } from "sonner";
-import { Search, Download, Users, X } from "lucide-react";
-import { cn, downloadCSV } from "@/lib/utils";
-
-const ZONES = ["North", "South", "East", "West", "Central"] as const;
-const ZONE_AREAS: Record<string, string[]> = {
-  North: ["Delhi", "Chandigarh", "Lucknow", "Jaipur", "Amritsar"],
-  South: ["Chennai", "Bangalore", "Hyderabad", "Kochi", "Coimbatore"],
-  East: ["Kolkata", "Bhubaneswar", "Patna", "Ranchi", "Guwahati"],
-  West: ["Mumbai", "Pune", "Ahmedabad", "Surat", "Nagpur"],
-  Central: ["Indore", "Bhopal", "Raipur", "Jabalpur", "Gwalior"],
-};
+import { usePeople, type Person } from "../hooks/usePeople";
+import { useDynamicZoneNames } from "../hooks/useDynamicZones";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { List, Download, Search, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function ListPage() {
-  const { user } = useAuth();
-  const role = user?.role ?? "user";
-  const utils = trpc.useUtils();
-
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [filterZone, setFilterZone] = useState<string>("");
-  const [filterArea, setFilterArea] = useState<string>("");
-  const [unassignedOnly, setUnassignedOnly] = useState(true);
-  const [selectMode, setSelectMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [teamName, setTeamName] = useState("");
+  const [zoneFilter, setZoneFilter] = useState("");
 
-  const { data: allPeopleResult, isLoading } = trpc.people.list.useQuery({
-    pageSize: 400,
-    stay: true,
-    search: search || undefined,
-    zones: filterZone ? [filterZone] : undefined,
-    areas: filterArea ? [filterArea] : undefined,
-  });
+  const { data, isLoading } = usePeople({ acoNeeded: "Yes", search, zone: zoneFilter, page, pageSize: 50 });
+  const { data: zoneNames } = useDynamicZoneNames();
 
-  const { data: assignedIds } = trpc.teams.availablePeople.useQuery(
-    { zones: filterZone ? [filterZone] : undefined }
-  );
+  const people: Person[] = data?.people ?? [];
+  const total = data?.total ?? 0;
 
-  const createTeamMutation = trpc.teams.create.useMutation({
-    onSuccess: () => {
-      utils.teams.list.invalidate();
-      utils.people.list.invalidate();
-      toast.success("Team created!");
-      setSelectMode(false);
-      setSelectedIds([]);
-      setTeamName("");
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
-  const allPeople = allPeopleResult?.data ?? [];
-  const assignedSet = new Set((assignedIds ?? []).map((p: any) => p.id));
-
-  const filtered = allPeople.filter((p) => {
-    if (unassignedOnly && assignedSet.has(p.id)) return false;
-    return true;
-  });
-
-  const toggleCard = (id: number) => {
-    if (!selectMode) return;
-    if (selectedIds.includes(id)) {
-      setSelectedIds((s) => s.filter((x) => x !== id));
-    } else if (selectedIds.length < 8) {
-      setSelectedIds((s) => [...s, id]);
-    } else {
-      toast.error("Maximum 8 members per team");
-    }
-  };
-
-  const handleCreateTeam = () => {
-    if (selectedIds.length < 2) {
-      toast.error("Select at least 2 people");
-      return;
-    }
-    createTeamMutation.mutate({ memberIds: selectedIds, name: teamName || undefined });
-  };
-
-  const handleExportCSV = () => {
-    const headers = ["Name", "Gender", "Age Group", "Zone", "Area", "Category", "Note"];
-    const csvRows = filtered.map((p) => [
-      p.name, p.gender, p.ageGroup, p.zone,
-      p.area ?? "", p.category ?? "", p.note ?? "",
-    ].map((v) => `"${v}"`).join(","));
-    downloadCSV([headers.join(","), ...csvRows].join("\n"), "aco-players.csv");
-  };
-
-  const availableAreas = filterZone ? ZONE_AREAS[filterZone] ?? [] : [];
+  function exportCSV() {
+    const headers = ["Name", "Gender", "Zone", "Area", "Mandal", "Age Range"];
+    const rows = people.map((p) => [
+      `${p.firstName} ${p.lastName || ""}`.trim(),
+      p.gender === "M" ? "Male" : "Female",
+      p.zone || "",
+      p.area || "",
+      p.mandal || "",
+      p.ageRange || "",
+    ].join(","));
+    const csv = [headers.join(","), ...rows].join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = "aco-list.csv";
+    a.click();
+  }
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold font-display">ACO Players</h1>
-          <p className="text-muted-foreground text-sm">
-            {filtered.length} {unassignedOnly ? "unassigned" : "total"} ACO players
-          </p>
+    <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600">
+            <List className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">ACO Player List</h1>
+            <p className="text-sm text-gray-500">{total} ACO players (acoNeeded = "Yes")</p>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={handleExportCSV}>
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
-          {!selectMode ? (
-            <Button size="sm" onClick={() => setSelectMode(true)}>
-              <Users className="h-4 w-4" />
-              Create Team
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSelectMode(false);
-                setSelectedIds([]);
-                setTeamName("");
-              }}
-            >
-              <X className="h-4 w-4" />
-              Cancel
-            </Button>
-          )}
-        </div>
+        <button
+          onClick={exportCSV}
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-gray-200 bg-white rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          <Download className="w-4 h-4" />
+          Export CSV
+        </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            className="pl-9 w-48"
-            placeholder="Search..."
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+            placeholder="Search by name..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
-
-        {role === "admin" && (
-          <Select
-            value={filterZone || "__all__"}
-            onValueChange={(v) => { setFilterZone(v === "__all__" ? "" : v); setFilterArea(""); }}
-          >
-            <SelectTrigger className="w-36">
-              <SelectValue placeholder="All Zones" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">All Zones</SelectItem>
-              {ZONES.map((z) => <SelectItem key={z} value={z}>{z}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        )}
-
-        {availableAreas.length > 0 && (
-          <Select
-            value={filterArea || "__all__"}
-            onValueChange={(v) => setFilterArea(v === "__all__" ? "" : v)}
-          >
-            <SelectTrigger className="w-36">
-              <SelectValue placeholder="All Areas" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">All Areas</SelectItem>
-              {availableAreas.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        )}
-
-        <div className="flex items-center gap-2 border border-border rounded-md px-3">
-          <button
-            className={cn(
-              "py-1.5 px-2 text-sm rounded transition-colors",
-              unassignedOnly ? "bg-primary text-white" : "hover:bg-muted"
-            )}
-            onClick={() => setUnassignedOnly(true)}
-          >
-            Unassigned Only
-          </button>
-          <button
-            className={cn(
-              "py-1.5 px-2 text-sm rounded transition-colors",
-              !unassignedOnly ? "bg-primary text-white" : "hover:bg-muted"
-            )}
-            onClick={() => setUnassignedOnly(false)}
-          >
-            All ACO
-          </button>
-        </div>
+        <Select value={zoneFilter} onValueChange={(v) => { setZoneFilter(v === "all" ? "" : v); setPage(1); }}>
+          <SelectTrigger className="w-44 rounded-xl border-gray-200">
+            <SelectValue placeholder="All zones" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All zones</SelectItem>
+            {(zoneNames ?? []).map((z: string) => <SelectItem key={z} value={z}>{z}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Cards Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {[...Array(15)].map((_, i) => (
-            <Skeleton key={i} className="h-28" />
-          ))}
+      <div className="rounded-2xl border border-gray-100 shadow-sm bg-white overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50/80">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">#</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Gender</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Zone</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Area</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Mandal</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Age Range</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {isLoading ? (
+                Array.from({ length: 10 }).map((_, i) => (
+                  <tr key={i}>
+                    {Array.from({ length: 7 }).map((_, j) => (
+                      <td key={j} className="px-4 py-3">
+                        <div className="h-4 w-full bg-gray-100 rounded-lg animate-pulse" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : people.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-16">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+                        <List className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <p className="text-gray-900 font-medium">No ACO players found</p>
+                      <p className="text-sm text-gray-500 mt-1">Try adjusting your search or filter</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                people.map((p, idx) => (
+                  <tr key={p._id} className="hover:bg-indigo-50/30 transition-colors">
+                    <td className="px-4 py-3 text-gray-400">{(page - 1) * 50 + idx + 1}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900">{`${p.firstName} ${p.lastName || ""}`.trim()}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        p.gender === "M" ? "bg-blue-50 text-blue-700" : "bg-pink-50 text-pink-700"
+                      }`}>
+                        {p.gender === "M" ? "Male" : "Female"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500">{p.zone || "—"}</td>
+                    <td className="px-4 py-3 text-gray-500">{p.area || "—"}</td>
+                    <td className="px-4 py-3 text-gray-500">{p.mandal || "—"}</td>
+                    <td className="px-4 py-3 text-gray-500">{p.ageRange || "—"}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          No ACO players found
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {filtered.map((person) => {
-            const isSelected = selectedIds.includes(person.id);
-            const isAssigned = !unassignedOnly && assignedSet.has(person.id);
-            return (
-              <div
-                key={person.id}
-                onClick={() => toggleCard(person.id)}
-                className={cn(
-                  "p-3 rounded-xl border transition-all",
-                  selectMode && !isAssigned ? "cursor-pointer" : "",
-                  isSelected
-                    ? "border-primary bg-primary/10 ring-2 ring-primary"
-                    : isAssigned
-                    ? "border-border bg-muted/50 opacity-60"
-                    : "border-border bg-card hover:border-primary/40",
-                  selectMode && !isSelected && !isAssigned ? "hover:bg-primary/5" : ""
-                )}
+        {total > 50 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+            <p className="text-sm text-gray-500">
+              Showing {(page - 1) * 50 + 1}–{Math.min(page * 50, total)} of {total}
+            </p>
+            <div className="flex gap-2">
+              <button
+                disabled={page === 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium border border-gray-200 bg-white rounded-xl text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                <div className="flex flex-wrap gap-1 mb-2">
-                  <Badge variant={person.gender === "M" ? "blue" : "pink"} className="text-xs">
-                    {person.gender}
-                  </Badge>
-                  <Badge
-                    variant={
-                      person.ageGroup === "Child" ? "teal"
-                      : person.ageGroup === "Teen" ? "secondary"
-                      : person.ageGroup === "Senior" ? "orange"
-                      : "slate"
-                    }
-                    className="text-xs"
-                  >
-                    {person.ageGroup}
-                  </Badge>
-                  {person.category && (
-                    <Badge variant="purple" className="text-xs">{person.category}</Badge>
-                  )}
-                </div>
-                <p className="font-medium text-sm leading-tight">{person.name}</p>
-                {person.area && (
-                  <p className="text-xs text-muted-foreground mt-0.5">{person.area}</p>
-                )}
-                {person.note && (
-                  <p className="text-xs text-muted-foreground mt-0.5 italic truncate">{person.note}</p>
-                )}
-                {isAssigned && (
-                  <Badge variant="slate" className="text-xs mt-1">In Team</Badge>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Sticky Create Team Bar */}
-      {selectMode && (
-        <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-xl p-4 z-40 flex flex-wrap items-center gap-3">
-          <span className="text-sm font-medium">
-            {selectedIds.length} selected{selectedIds.length < 2 ? " (min 2)" : selectedIds.length >= 8 ? " (max 8)" : ""}
-          </span>
-          <Input
-            className="w-48"
-            placeholder="Team name (optional)"
-            value={teamName}
-            onChange={(e) => setTeamName(e.target.value)}
-          />
-          <Button
-            onClick={handleCreateTeam}
-            disabled={selectedIds.length < 2 || createTeamMutation.isPending}
-          >
-            Create Team ({selectedIds.length})
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setSelectMode(false);
-              setSelectedIds([]);
-              setTeamName("");
-            }}
-          >
-            Cancel
-          </Button>
-        </div>
-      )}
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </button>
+              <button
+                disabled={page * 50 >= total}
+                onClick={() => setPage((p) => p + 1)}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium border border-gray-200 bg-white rounded-xl text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

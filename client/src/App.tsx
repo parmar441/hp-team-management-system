@@ -1,131 +1,25 @@
-import { Suspense, lazy } from "react";
-import { Route, Switch, Redirect } from "wouter";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { trpc, createTRPCClient } from "@/lib/trpc";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Toaster } from "sonner";
+import { useMe } from "./hooks/useAuth";
+import DashboardLayout from "./components/layout/DashboardLayout";
 
-const LoginPage = lazy(() => import("@/pages/LoginPage"));
-const HomePage = lazy(() => import("@/pages/HomePage"));
-const PeoplePage = lazy(() => import("@/pages/PeoplePage"));
-const ListPage = lazy(() => import("@/pages/ListPage"));
-const TeamsPage = lazy(() => import("@/pages/TeamsPage"));
-const HotelsPage = lazy(() => import("@/pages/HotelsPage"));
-const AssignmentsPage = lazy(() => import("@/pages/AssignmentsPage"));
-const FinalListPage = lazy(() => import("@/pages/FinalListPage"));
-const AdminPage = lazy(() => import("@/pages/AdminPage"));
-
-const PageLoader = () => (
-  <div className="flex h-full items-center justify-center">
-    <div className="h-8 w-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-  </div>
-);
-
-function RequireAuth({
-  children,
-  allowedRoles,
-}: {
-  children: React.ReactNode;
-  allowedRoles?: string[];
-}) {
-  const { user, loading } = useAuth();
-
-  if (loading) return <PageLoader />;
-  if (!user) return <Redirect to="/login" />;
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold font-display">Access Denied</h2>
-          <p className="text-muted-foreground mt-2">
-            You don't have permission to view this page.
-          </p>
-        </div>
-      </div>
-    );
-  }
-  return <>{children}</>;
-}
-
-function AppRoutes() {
-  const { user, loading } = useAuth();
-
-  if (loading) return <PageLoader />;
-
-  if (!user) {
-    return (
-      <Switch>
-        <Route path="/login">
-          <Suspense fallback={<PageLoader />}>
-            <LoginPage />
-          </Suspense>
-        </Route>
-        <Route>
-          <Redirect to="/login" />
-        </Route>
-      </Switch>
-    );
-  }
-
-  return (
-    <DashboardLayout>
-      <Suspense fallback={<PageLoader />}>
-        <Switch>
-          <Route path="/">
-            <HomePage />
-          </Route>
-
-          <Route path="/people">
-            <RequireAuth allowedRoles={["admin", "zone_lead", "area_lead"]}>
-              <PeoplePage />
-            </RequireAuth>
-          </Route>
-
-          <Route path="/list">
-            <RequireAuth allowedRoles={["admin", "zone_lead", "area_lead"]}>
-              <ListPage />
-            </RequireAuth>
-          </Route>
-
-          <Route path="/teams">
-            <RequireAuth allowedRoles={["admin", "zone_lead", "area_lead"]}>
-              <TeamsPage />
-            </RequireAuth>
-          </Route>
-
-          <Route path="/hotels">
-            <RequireAuth allowedRoles={["admin"]}>
-              <HotelsPage />
-            </RequireAuth>
-          </Route>
-
-          <Route path="/assignments">
-            <RequireAuth allowedRoles={["admin", "zone_lead", "area_lead"]}>
-              <AssignmentsPage />
-            </RequireAuth>
-          </Route>
-
-          <Route path="/final-list">
-            <RequireAuth allowedRoles={["admin", "zone_lead", "area_lead"]}>
-              <FinalListPage />
-            </RequireAuth>
-          </Route>
-
-          <Route path="/admin">
-            <RequireAuth allowedRoles={["admin"]}>
-              <AdminPage />
-            </RequireAuth>
-          </Route>
-
-          <Route>
-            <Redirect to="/" />
-          </Route>
-        </Switch>
-      </Suspense>
-    </DashboardLayout>
-  );
-}
+// Pages
+import HomePage from "./pages/HomePage";
+import LoginPage from "./pages/LoginPage";
+import PeoplePage from "./pages/PeoplePage";
+import ListPage from "./pages/ListPage";
+import TeamsPage from "./pages/TeamsPage";
+import TournamentsPage from "./pages/TournamentsPage";
+import AssignmentsPage from "./pages/AssignmentsPage";
+import FinalListPage from "./pages/FinalListPage";
+import AdminPage from "./pages/AdminPage";
+import RegistrationPage from "./pages/RegistrationPage";
+import DynamicZonesPage from "./pages/DynamicZonesPage";
+import DynamicAreasPage from "./pages/DynamicAreasPage";
+import SearchAssistantPage from "./pages/SearchAssistantPage";
+import MyTeamsPage from "./pages/MyTeamsPage";
+import TeamLeadDashboard from "./pages/TeamLeadDashboard";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -136,17 +30,55 @@ const queryClient = new QueryClient({
   },
 });
 
-const trpcClient = createTRPCClient();
+function PrivateRoute({ children }: { children: React.ReactNode }) {
+  const { data, isLoading, isError } = useMe();
+  if (isLoading) return (
+    <div className="flex flex-col items-center justify-center h-screen bg-gray-50 gap-3">
+      <div className="w-10 h-10 rounded-full border-[3px] border-gray-200 border-t-indigo-600 animate-spin" />
+      <p className="text-sm text-gray-400 font-medium">Loading...</p>
+    </div>
+  );
+  if (isError || !data?.user) return <Navigate to="/login" replace />;
+  return <DashboardLayout>{children}</DashboardLayout>;
+}
+
+function RoleRedirect() {
+  const { data } = useMe();
+  const role = data?.user?.role;
+  if (role === "zone_lead" || role === "area_lead") return <TeamLeadDashboard />;
+  return <HomePage />;
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+
+      <Route path="/" element={<PrivateRoute><RoleRedirect /></PrivateRoute>} />
+      <Route path="/registration" element={<PrivateRoute><RegistrationPage /></PrivateRoute>} />
+      <Route path="/dynamic-zones" element={<PrivateRoute><DynamicZonesPage /></PrivateRoute>} />
+      <Route path="/dynamic-areas" element={<PrivateRoute><DynamicAreasPage /></PrivateRoute>} />
+      <Route path="/people" element={<PrivateRoute><PeoplePage /></PrivateRoute>} />
+      <Route path="/list" element={<PrivateRoute><ListPage /></PrivateRoute>} />
+      <Route path="/teams" element={<PrivateRoute><TeamsPage /></PrivateRoute>} />
+      <Route path="/tournaments" element={<PrivateRoute><TournamentsPage /></PrivateRoute>} />
+      <Route path="/assignments" element={<PrivateRoute><AssignmentsPage /></PrivateRoute>} />
+      <Route path="/final-list" element={<PrivateRoute><FinalListPage /></PrivateRoute>} />
+      <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
+      <Route path="/my-teams" element={<PrivateRoute><MyTeamsPage /></PrivateRoute>} />
+      <Route path="/search-assistant" element={<PrivateRoute><SearchAssistantPage /></PrivateRoute>} />
+      <Route path="/404" element={<NotFound />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
 
 export default function App() {
   return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <AppRoutes />
-          <Toaster position="top-right" richColors />
-        </AuthProvider>
-      </QueryClientProvider>
-    </trpc.Provider>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }

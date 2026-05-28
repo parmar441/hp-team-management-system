@@ -1,129 +1,85 @@
+import "dotenv/config";
 import express from "express";
-import "express-session";
-
-declare module "express-session" {
-  interface SessionData {
-    user?: import("./schema.js").User;
-  }
-}
-import session from "express-session";
 import cors from "cors";
-import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { appRouter } from "./routers/index.js";
-import { createContext } from "./trpc.js";
-import { exportAssignmentsPdf } from "./pdfExport.js";
-import {
-  getUserByOpenId,
-  createUser,
-  listUsers,
-} from "./helpers.js";
-import { db } from "./db.js";
-import { users } from "./schema.js";
-import { eq } from "drizzle-orm";
+import cookieParser from "cookie-parser";
+import mongoose from "mongoose";
+import { rateLimit } from "express-rate-limit";
+
+import authRoutes from "./routes/auth.js";
+import peopleRoutes from "./routes/people.js";
+import teamsRoutes from "./routes/teams.js";
+import tournamentsRoutes from "./routes/tournaments.js";
+import assignmentsRoutes from "./routes/assignments.js";
+import dashboardRoutes from "./routes/dashboard.js";
+import adminRoutes from "./routes/admin.js";
+import teamLeadRoutes from "./routes/teamLead.js";
+import registrationsRoutes from "./routes/registrations.js";
+import dynamicZonesRoutes from "./routes/dynamicZones.js";
+import dynamicAreasRoutes from "./routes/dynamicAreas.js";
+import searchAssistantRoutes from "./routes/searchAssistant.js";
 
 const app = express();
-const PORT = process.env.PORT ?? 4500;
+const PORT = process.env.PORT || 3000;
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/hp-team-management";
 
-app.use(
-  cors({
-    origin: ["http://localhost:5173", "http://localhost:3000"],
-    credentials: true,
-  })
-);
+// ── Rate Limiting ──────────────────────────────────────────────────────────────
+const generalLimiter = rateLimit({ windowMs: 60_000, max: 100 });
+const authLimiter = rateLimit({ windowMs: 60_000, max: 10 });
+const writeLimiter = rateLimit({ windowMs: 60_000, max: 30 });
+const bulkLimiter = rateLimit({ windowMs: 60_000, max: 5 });
+const exportLimiter = rateLimit({ windowMs: 60_000, max: 3 });
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// ── Middleware ─────────────────────────────────────────────────────────────────
+app.use(cors({
+  origin: ["http://localhost:5173", "http://localhost:3000", "http://localhost:4173"],
+  credentials: true,
+}));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(cookieParser());
+app.use("/api", generalLimiter);
 
-app.use(
-  session({
-    secret: "accommodation-seva-secret-key-2024",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      secure: false,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    },
-  })
-);
-
-// ── Auth Routes ───────────────────────────────────────────────────────────────
-app.post("/api/auth/login", async (req, res) => {
-  try {
-    const { name, email } = req.body as { name: string; email: string };
-
-    if (!name || !email) {
-      res.status(400).json({ error: "Name and email are required" });
-      return;
-    }
-
-    const openId = `local:${email.toLowerCase().trim()}`;
-    let user = await getUserByOpenId(openId);
-
-    if (!user) {
-      // Check if this is the first user — make them admin
-      const allUsers = await listUsers();
-      const isFirst = allUsers.length === 0;
-      user = await createUser({
-        openId,
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
-        loginMethod: "local",
-      });
-      if (isFirst && user) {
-        await db.update(users).set({ role: "admin" }).where(eq(users.id, user.id));
-        user = { ...user, role: "admin" };
-      }
-    } else {
-      // Update last signed in
-      await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, user.id));
-      // Refresh from DB
-      const fresh = await getUserByOpenId(openId);
-      if (fresh) user = fresh;
-    }
-
-    req.session.user = user ?? undefined;
-    res.json({ user });
-  } catch (error: any) {
-    console.error("Login error:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post("/api/auth/logout", (req, res) => {
-  req.session.destroy(() => {
-    res.json({ success: true });
-  });
-});
-
-app.get("/api/auth/me", (req, res) => {
-  const user = req.session?.user;
-  if (!user) {
-    res.status(401).json({ error: "Not authenticated" });
-    return;
-  }
-  res.json({ user });
-});
+// ── Routes ────────────────────────────────────────────────────────────────────
+app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/people", writeLimiter, peopleRoutes);
+app.use("/api/teams", writeLimiter, teamsRoutes);
+app.use("/api/tournaments", writeLimiter, tournamentsRoutes);
+app.use("/api/assignments", assignmentsRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/team-lead", teamLeadRoutes);
+app.use("/api/registrations", registrationsRoutes);
+app.use("/api/dynamic-zones", dynamicZonesRoutes);
+app.use("/api/dynamic-areas", dynamicAreasRoutes);
+app.use("/api/search-assistant", searchAssistantRoutes);
 
 // ── PDF Export ────────────────────────────────────────────────────────────────
-app.get("/api/export/assignments-pdf", exportAssignmentsPdf);
-
-// ── tRPC ──────────────────────────────────────────────────────────────────────
-app.use(
-  "/trpc",
-  createExpressMiddleware({
-    router: appRouter,
-    createContext,
-  })
-);
+app.get("/api/export/assignments-pdf", exportLimiter, async (req, res) => {
+  try {
+    const { exportAssignmentsPdf } = await import("./pdfExport.js");
+    return exportAssignmentsPdf(req as any, res as any);
+  } catch {
+    res.status(500).json({ error: "PDF export unavailable" });
+  }
+});
 
 // ── Health ────────────────────────────────────────────────────────────────────
-app.get("/api/health", (_, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString(), db: mongoose.connection.readyState === 1 ? "connected" : "disconnected" });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Accommodation Seva server running on port ${PORT}`);
-});
+// ── Start ─────────────────────────────────────────────────────────────────────
+async function start() {
+  try {
+    await mongoose.connect(MONGODB_URI);
+    console.log("✅ MongoDB connected");
+    app.listen(PORT, () => {
+      console.log(`🚀 HP Team Management server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error("Failed to connect to MongoDB:", err);
+    process.exit(1);
+  }
+}
 
-export type { AppRouter } from "./routers/index.js";
+start();

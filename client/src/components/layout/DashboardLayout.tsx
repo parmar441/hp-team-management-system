@@ -1,297 +1,260 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import {
   LayoutDashboard,
+  UserPlus,
+  MapPin,
+  Map,
   Users,
   List,
   UsersRound,
-  Building2,
+  Hotel,
   ClipboardList,
   FileText,
   Settings,
-  ChevronLeft,
-  ChevronRight,
+  MessageSquare,
   LogOut,
-  Sun,
-  Moon,
   Menu,
+  X,
+  ChevronRight,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-
-const SIDEBAR_DEFAULT = 280;
-const SIDEBAR_MIN = 200;
-const SIDEBAR_MAX = 480;
+import { useMe, useLogout } from "../../hooks/useAuth";
 
 interface NavItem {
   label: string;
-  href: string;
-  icon: React.ElementType;
-  roles: string[];
+  to: string;
+  icon: React.ReactNode;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", href: "/", icon: LayoutDashboard, roles: ["admin", "zone_lead", "area_lead", "user"] },
-];
+interface NavSection {
+  label?: string;
+  items: NavItem[];
+}
 
-const WORKFLOW_ITEMS: NavItem[] = [
-  { label: "People", href: "/people", icon: Users, roles: ["admin", "zone_lead", "area_lead"] },
-  { label: "List", href: "/list", icon: List, roles: ["admin", "zone_lead", "area_lead"] },
-  { label: "Teams", href: "/teams", icon: UsersRound, roles: ["admin", "zone_lead", "area_lead"] },
-  { label: "Hotels", href: "/hotels", icon: Building2, roles: ["admin"] },
-  { label: "Assignments", href: "/assignments", icon: ClipboardList, roles: ["admin", "zone_lead", "area_lead"] },
-  { label: "Final List", href: "/final-list", icon: FileText, roles: ["admin", "zone_lead", "area_lead"] },
-];
+function getNavSections(role: string): NavSection[] {
+  const base: NavItem = { label: "Dashboard", to: "/", icon: <LayoutDashboard className="w-[18px] h-[18px]" /> };
 
-const SETTINGS_ITEMS: NavItem[] = [
-  { label: "Admin Panel", href: "/admin", icon: Settings, roles: ["admin"] },
-];
+  if (role === "admin") {
+    return [
+      { items: [base] },
+      {
+        label: "Setup",
+        items: [
+          { label: "Registration", to: "/registration", icon: <UserPlus className="w-[18px] h-[18px]" /> },
+          { label: "Zones", to: "/dynamic-zones", icon: <MapPin className="w-[18px] h-[18px]" /> },
+          { label: "Areas", to: "/dynamic-areas", icon: <Map className="w-[18px] h-[18px]" /> },
+        ],
+      },
+      {
+        label: "Workflow",
+        items: [
+          { label: "People", to: "/people", icon: <Users className="w-[18px] h-[18px]" /> },
+          { label: "List", to: "/list", icon: <List className="w-[18px] h-[18px]" /> },
+          { label: "Teams", to: "/teams", icon: <UsersRound className="w-[18px] h-[18px]" /> },
+          { label: "Hotels", to: "/tournaments", icon: <Hotel className="w-[18px] h-[18px]" /> },
+          { label: "Assignments", to: "/assignments", icon: <ClipboardList className="w-[18px] h-[18px]" /> },
+          { label: "Final List", to: "/final-list", icon: <FileText className="w-[18px] h-[18px]" /> },
+        ],
+      },
+      {
+        label: "Admin",
+        items: [
+          { label: "Admin Panel", to: "/admin", icon: <Settings className="w-[18px] h-[18px]" /> },
+          { label: "AI Assistant", to: "/search-assistant", icon: <MessageSquare className="w-[18px] h-[18px]" /> },
+        ],
+      },
+    ];
+  }
 
-function NavLink({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
-  const [location] = useLocation();
-  const isActive =
-    item.href === "/"
-      ? location === "/"
-      : location.startsWith(item.href);
+  if (role === "zone_lead") {
+    return [
+      { items: [base, { label: "Areas", to: "/dynamic-areas", icon: <Map className="w-[18px] h-[18px]" /> }] },
+      {
+        label: "Workflow",
+        items: [
+          { label: "People", to: "/people", icon: <Users className="w-[18px] h-[18px]" /> },
+          { label: "List", to: "/list", icon: <List className="w-[18px] h-[18px]" /> },
+          { label: "Teams", to: "/teams", icon: <UsersRound className="w-[18px] h-[18px]" /> },
+          { label: "Assignments", to: "/assignments", icon: <ClipboardList className="w-[18px] h-[18px]" /> },
+          { label: "Final List", to: "/final-list", icon: <FileText className="w-[18px] h-[18px]" /> },
+        ],
+      },
+      { label: "Tools", items: [{ label: "AI Assistant", to: "/search-assistant", icon: <MessageSquare className="w-[18px] h-[18px]" /> }] },
+    ];
+  }
 
-  const Icon = item.icon;
+  if (role === "area_lead") {
+    return [
+      { items: [base] },
+      {
+        label: "Workflow",
+        items: [
+          { label: "People", to: "/people", icon: <Users className="w-[18px] h-[18px]" /> },
+          { label: "List", to: "/list", icon: <List className="w-[18px] h-[18px]" /> },
+          { label: "Teams", to: "/teams", icon: <UsersRound className="w-[18px] h-[18px]" /> },
+          { label: "Assignments", to: "/assignments", icon: <ClipboardList className="w-[18px] h-[18px]" /> },
+          { label: "Final List", to: "/final-list", icon: <FileText className="w-[18px] h-[18px]" /> },
+        ],
+      },
+      { label: "Tools", items: [{ label: "AI Assistant", to: "/search-assistant", icon: <MessageSquare className="w-[18px] h-[18px]" /> }] },
+    ];
+  }
+
+  return [
+    { items: [base] },
+    { label: "Workflow", items: [{ label: "Assignments", to: "/assignments", icon: <ClipboardList className="w-[18px] h-[18px]" /> }] },
+    { label: "Tools", items: [{ label: "AI Assistant", to: "/search-assistant", icon: <MessageSquare className="w-[18px] h-[18px]" /> }] },
+  ];
+}
+
+const roleBadges: Record<string, { label: string; cls: string }> = {
+  admin: { label: "Admin", cls: "bg-violet-500/20 text-violet-300" },
+  zone_lead: { label: "Zone Lead", cls: "bg-sky-500/20 text-sky-300" },
+  area_lead: { label: "Area Lead", cls: "bg-cyan-500/20 text-cyan-300" },
+  team_lead: { label: "Team Lead", cls: "bg-emerald-500/20 text-emerald-300" },
+  user: { label: "User", cls: "bg-gray-500/20 text-gray-400" },
+};
+
+function SidebarContent({ onClose }: { onClose?: () => void }) {
+  const { data } = useMe();
+  const logout = useLogout();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const user = data?.user;
+  const role = user?.role || "user";
+  const sections = getNavSections(role);
+  const badge = roleBadges[role] ?? roleBadges.user;
+  const initials = (user?.name || user?.email || "U").slice(0, 2).toUpperCase();
+
+  function handleLogout() {
+    logout.mutate(undefined, { onSuccess: () => navigate("/login") });
+  }
 
   return (
-    <Link href={item.href}>
-      <a
-        className={cn(
-          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px]",
-          isActive
-            ? "bg-[--color-sidebar-accent] text-white"
-            : "text-[--color-sidebar-foreground] hover:bg-[--color-sidebar-accent] hover:text-white"
+    <div className="flex flex-col h-full bg-[#0f172a]">
+      {/* Brand */}
+      <div className="flex items-center justify-between px-5 h-16 border-b border-white/[0.06] flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+            <UsersRound className="w-4.5 h-4.5 text-white" />
+          </div>
+          <div className="leading-tight">
+            <p className="text-white font-semibold text-[13px]">HP Team Manager</p>
+            <p className="text-slate-500 text-[11px]">Management System</p>
+          </div>
+        </div>
+        {onClose && (
+          <button onClick={onClose} className="lg:hidden p-1.5 rounded-lg hover:bg-white/[0.06] text-slate-500 hover:text-white transition-colors">
+            <X className="w-4 h-4" />
+          </button>
         )}
-        title={collapsed ? item.label : undefined}
-      >
-        <Icon className="h-4 w-4 shrink-0" />
-        {!collapsed && <span>{item.label}</span>}
-      </a>
-    </Link>
-  );
-}
-
-export function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout } = useAuth();
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const stored = localStorage.getItem("sidebarWidth");
-    return stored ? parseInt(stored, 10) : SIDEBAR_DEFAULT;
-  });
-  const [collapsed, setCollapsed] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => {
-    return document.documentElement.classList.contains("dark");
-  });
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const resizing = useRef(false);
-  const startX = useRef(0);
-  const startWidth = useRef(0);
-
-  useEffect(() => {
-    localStorage.setItem("sidebarWidth", String(sidebarWidth));
-  }, [sidebarWidth]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    resizing.current = true;
-    startX.current = e.clientX;
-    startWidth.current = sidebarWidth;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  }, [sidebarWidth]);
-
-  useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => {
-      if (!resizing.current) return;
-      const delta = e.clientX - startX.current;
-      const newWidth = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startWidth.current + delta));
-      setSidebarWidth(newWidth);
-    };
-    const onMouseUp = () => {
-      resizing.current = false;
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-  }, []);
-
-  const toggleDark = () => {
-    const next = !darkMode;
-    setDarkMode(next);
-    document.documentElement.classList.toggle("dark", next);
-  };
-
-  const handleLogout = async () => {
-    await logout();
-    toast.success("Logged out successfully");
-  };
-
-  if (!user) return null;
-
-  const role = user.role;
-  const visibleWorkflow = WORKFLOW_ITEMS.filter((item) => item.roles.includes(role));
-  const visibleSettings = SETTINGS_ITEMS.filter((item) => item.roles.includes(role));
-  const visibleNav = NAV_ITEMS.filter((item) => item.roles.includes(role));
-
-  const roleColors: Record<string, string> = {
-    admin: "blue",
-    zone_lead: "purple",
-    area_lead: "amber",
-    user: "slate",
-  };
-
-  const sidebarContent = (
-    <div
-      className="flex flex-col h-full bg-[--color-sidebar] text-[--color-sidebar-foreground]"
-      style={{ width: collapsed ? 64 : sidebarWidth }}
-    >
-      {/* Logo */}
-      <div className="flex items-center justify-between p-4 border-b border-white/10">
-        {!collapsed && (
-          <h1 className="text-lg font-bold font-display text-white truncate">
-            Accommodation Seva
-          </h1>
-        )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-1.5 rounded-md hover:bg-[--color-sidebar-accent] text-[--color-sidebar-foreground] transition-colors ml-auto"
-        >
-          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {visibleNav.map((item) => (
-          <NavLink key={item.href} item={item} collapsed={collapsed} />
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+        {sections.map((section, sIdx) => (
+          <div key={sIdx}>
+            {section.label && (
+              <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                {section.label}
+              </p>
+            )}
+            <ul className="space-y-0.5">
+              {section.items.map((item) => {
+                const active = location.pathname === item.to || (item.to !== "/" && location.pathname.startsWith(item.to));
+                return (
+                  <li key={item.to}>
+                    <Link
+                      to={item.to}
+                      onClick={onClose}
+                      className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
+                        active
+                          ? "bg-indigo-600/15 text-white"
+                          : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
+                      }`}
+                    >
+                      <span className={`transition-colors flex-shrink-0 ${active ? "text-indigo-400" : "text-slate-500 group-hover:text-slate-400"}`}>
+                        {item.icon}
+                      </span>
+                      <span className="flex-1 truncate">{item.label}</span>
+                      {active && <ChevronRight className="w-3 h-3 text-indigo-400/60" />}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         ))}
-
-        {visibleWorkflow.length > 0 && (
-          <>
-            {!collapsed && (
-              <p className="text-xs font-semibold uppercase tracking-wider text-[--color-sidebar-foreground]/50 px-3 pt-4 pb-1">
-                Workflow
-              </p>
-            )}
-            {collapsed && <div className="border-t border-white/10 my-2" />}
-            {visibleWorkflow.map((item) => (
-              <NavLink key={item.href} item={item} collapsed={collapsed} />
-            ))}
-          </>
-        )}
-
-        {visibleSettings.length > 0 && (
-          <>
-            {!collapsed && (
-              <p className="text-xs font-semibold uppercase tracking-wider text-[--color-sidebar-foreground]/50 px-3 pt-4 pb-1">
-                Settings
-              </p>
-            )}
-            {collapsed && <div className="border-t border-white/10 my-2" />}
-            {visibleSettings.map((item) => (
-              <NavLink key={item.href} item={item} collapsed={collapsed} />
-            ))}
-          </>
-        )}
       </nav>
 
-      {/* User Profile */}
-      <div className="border-t border-white/10 p-3">
-        <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold shrink-0">
-            {(user.name ?? user.email ?? "U")[0]?.toUpperCase()}
+      {/* User Footer */}
+      <div className="px-3 pb-3 pt-2 border-t border-white/[0.06] flex-shrink-0">
+        <div className="flex items-center gap-3 px-3 py-2.5 mb-1">
+          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0">
+            {initials}
           </div>
-          {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">
-                {user.name ?? user.email}
-              </p>
-              <Badge
-                variant={roleColors[role] as any}
-                className="text-xs mt-0.5"
-              >
-                {role.replace("_", " ")}
-              </Badge>
-            </div>
-          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-white text-[13px] font-medium truncate leading-tight">{user?.name || user?.email || "User"}</p>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold mt-0.5 inline-block uppercase tracking-wide ${badge.cls}`}>
+              {badge.label}
+            </span>
+          </div>
         </div>
-        <div className={cn("flex gap-1 mt-2", collapsed ? "flex-col items-center" : "flex-row")}>
-          <button
-            onClick={toggleDark}
-            className="p-2 rounded-md hover:bg-[--color-sidebar-accent] text-[--color-sidebar-foreground] transition-colors"
-            title={darkMode ? "Light mode" : "Dark mode"}
-          >
-            {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </button>
-          <button
-            onClick={handleLogout}
-            className="p-2 rounded-md hover:bg-[--color-sidebar-accent] text-[--color-sidebar-foreground] transition-colors"
-            title="Logout"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-500 hover:text-slate-300 hover:bg-white/[0.04] rounded-lg transition-all duration-150"
+        >
+          <LogOut className="w-4 h-4" />
+          Sign out
+        </button>
       </div>
     </div>
   );
+}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-gray-50">
       {/* Desktop Sidebar */}
-      <div className="hidden md:flex relative shrink-0">
-        {sidebarContent}
-        {/* Resize handle */}
-        {!collapsed && (
-          <div
-            className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 transition-colors"
-            onMouseDown={handleMouseDown}
-          />
-        )}
-      </div>
+      <aside className="hidden lg:flex w-[260px] flex-shrink-0 flex-col border-r border-gray-200/60">
+        <SidebarContent />
+      </aside>
 
       {/* Mobile Sidebar Overlay */}
-      {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
-          <div
-            className="fixed inset-0 bg-black/50"
-            onClick={() => setMobileOpen(false)}
-          />
-          <div className="relative z-10 w-[280px]">
-            {sidebarContent}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+          <div className="absolute left-0 top-0 bottom-0 w-[260px] shadow-2xl animate-fadeIn">
+            <SidebarContent onClose={() => setSidebarOpen(false)} />
           </div>
         </div>
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Mobile Header */}
-        <div className="md:hidden flex items-center gap-3 p-4 border-b border-border bg-card">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setMobileOpen(true)}
-            className="shrink-0"
+        <header className="lg:hidden flex items-center gap-3 px-4 h-14 bg-white border-b border-gray-200 shadow-soft flex-shrink-0">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            <Menu className="h-5 w-5" />
-          </Button>
-          <h1 className="text-lg font-bold font-display truncate">
-            Accommodation Seva
-          </h1>
-        </div>
+            <Menu className="w-5 h-5 text-gray-600" />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center">
+              <UsersRound className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="font-semibold text-gray-900 text-sm">HP Team Manager</span>
+          </div>
+        </header>
 
-        <main className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-y-auto">
           {children}
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
