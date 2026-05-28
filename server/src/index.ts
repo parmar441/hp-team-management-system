@@ -30,8 +30,20 @@ const bulkLimiter = rateLimit({ windowMs: 60_000, max: 5 });
 const exportLimiter = rateLimit({ windowMs: 60_000, max: 3 });
 
 // ── Middleware ─────────────────────────────────────────────────────────────────
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://localhost:4173",
+  ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
+];
+
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:3000", "http://localhost:4173"],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: "10mb" }));
