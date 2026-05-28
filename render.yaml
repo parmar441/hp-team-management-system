@@ -5,7 +5,7 @@ services:
     runtime: node
     plan: free
     rootDir: ""
-    buildCommand: npx pnpm@9 install --frozen-lockfile=false && npx pnpm@9 --filter client install --frozen-lockfile=false && npx pnpm@9 --filter client build && npx pnpm@9 --filter server build
+    buildCommand: npx pnpm@9 install --frozen-lockfile=false --production=false && npx pnpm@9 --filter client build && npx pnpm@9 --filter server build
     startCommand: node server/dist/index.js
     envVars:
       - key: NODE_ENV
