@@ -4,6 +4,8 @@ import { TournamentSlot } from "./models/TournamentSlot.js";
 import { Tournament } from "./models/Tournament.js";
 import { Team } from "./models/Team.js";
 import { Person } from "./models/Person.js";
+import { HotelRoom } from "./models/HotelRoom.js";
+import { HotelPersonAssignment } from "./models/HotelPersonAssignment.js";
 import { LeadCredential } from "./models/LeadCredential.js";
 import { ZoneAssignment } from "./models/ZoneAssignment.js";
 import { AreaAssignment } from "./models/AreaAssignment.js";
@@ -52,12 +54,14 @@ async function seed() {
   await mongoose.connect(MONGODB_URI);
   console.log("Connected to MongoDB");
 
-  // 1. Clear all collections except admin user
+  // 1. Clear all 15 collections except admin user
   await Promise.all([
     TournamentSlot.deleteMany({}),
     Tournament.deleteMany({}),
     Team.deleteMany({}),
     Person.deleteMany({}),
+    HotelRoom.deleteMany({}),
+    HotelPersonAssignment.deleteMany({}),
     LeadCredential.deleteMany({}),
     ZoneAssignment.deleteMany({}),
     AreaAssignment.deleteMany({}),

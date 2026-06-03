@@ -1,4 +1,3 @@
-// Pre-defined population paths
 export const POPULATE = {
   teamWithMembers: { path: "members" },
   slotWithTeam: { path: "teamId", populate: { path: "members" } },
@@ -9,4 +8,6 @@ export const POPULATE = {
   zoneRuleWithZone: { path: "zoneId" },
   areaRuleWithArea: { path: "areaId" },
   credentialWithUser: { path: "userId" },
+  hotelPersonWithUser: { path: "userId" },
+  hotelPersonWithHotel: { path: "hotelId" },
 };

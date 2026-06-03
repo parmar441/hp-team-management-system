@@ -208,6 +208,31 @@ router.patch("/bulk-toggle-aco", requireAdmin, async (req: Request, res: Respons
   }
 });
 
+// PATCH /api/people/:id/check-in
+router.patch("/:id/check-in", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const person = await Person.findById(req.params.id);
+    if (!person) { res.status(404).json({ error: "Not found" }); return; }
+    const newVal = person.checkedIn === "Yes" ? "No" : "Yes";
+    person.checkedIn = newVal;
+    await person.save();
+    res.json(person);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// PATCH /api/people/bulk-check-in
+router.patch("/bulk-check-in", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ids, checkedIn } = req.body as { ids: string[]; checkedIn: "Yes" | "No" };
+    await Person.updateMany({ _id: { $in: ids } }, { checkedIn });
+    res.json({ updated: ids.length });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // PATCH /api/people/:id/move — move to another team
 router.patch("/:id/move", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   try {

@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  DoorOpen,
 } from "lucide-react";
 import { useMe, useLogout } from "../../hooks/useAuth";
 
@@ -52,6 +53,7 @@ function getNavSections(role: string): NavSection[] {
           { label: "List", to: "/list", icon: <List className="w-[18px] h-[18px]" /> },
           { label: "Teams", to: "/teams", icon: <UsersRound className="w-[18px] h-[18px]" /> },
           { label: "Hotels", to: "/tournaments", icon: <Hotel className="w-[18px] h-[18px]" /> },
+          { label: "Rooms", to: "/rooms", icon: <DoorOpen className="w-[18px] h-[18px]" /> },
           { label: "Assignments", to: "/assignments", icon: <ClipboardList className="w-[18px] h-[18px]" /> },
           { label: "Final List", to: "/final-list", icon: <FileText className="w-[18px] h-[18px]" /> },
         ],
@@ -100,6 +102,14 @@ function getNavSections(role: string): NavSection[] {
     ];
   }
 
+  if (role === "hotel_person") {
+    return [
+      { items: [base] },
+      { label: "Workflow", items: [{ label: "Rooms", to: "/rooms", icon: <DoorOpen className="w-[18px] h-[18px]" /> }] },
+      { label: "Tools", items: [{ label: "AI Assistant", to: "/search-assistant", icon: <MessageSquare className="w-[18px] h-[18px]" /> }] },
+    ];
+  }
+
   return [
     { items: [base] },
     { label: "Workflow", items: [{ label: "Assignments", to: "/assignments", icon: <ClipboardList className="w-[18px] h-[18px]" /> }] },
@@ -111,6 +121,7 @@ const roleBadges: Record<string, { label: string; cls: string }> = {
   admin: { label: "Admin", cls: "bg-violet-500/20 text-violet-300" },
   zone_lead: { label: "Zone Lead", cls: "bg-sky-500/20 text-sky-300" },
   area_lead: { label: "Area Lead", cls: "bg-cyan-500/20 text-cyan-300" },
+  hotel_person: { label: "Hotel Person", cls: "bg-amber-500/20 text-amber-300" },
   team_lead: { label: "Team Lead", cls: "bg-emerald-500/20 text-emerald-300" },
   user: { label: "User", cls: "bg-gray-500/20 text-gray-400" },
 };

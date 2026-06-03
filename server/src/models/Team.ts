@@ -25,6 +25,17 @@ teamSchema.virtual("isEmpty").get(function () {
   return count === 0;
 });
 
+// Query Helpers
+(teamSchema.query as any).withMembers = function (this: any) {
+  return this.populate("members");
+};
+(teamSchema.query as any).inZone = function (this: any, zone: string) {
+  return this.where({ zone });
+};
+(teamSchema.query as any).nonEmpty = function (this: any) {
+  return this.where({ "members.0": { $exists: true } });
+};
+
 teamSchema.index({ zone: 1 });
 teamSchema.set("toJSON", { virtuals: true });
 teamSchema.set("toObject", { virtuals: true });

@@ -19,6 +19,7 @@ import DynamicAreasPage from "./pages/DynamicAreasPage";
 import SearchAssistantPage from "./pages/SearchAssistantPage";
 import MyTeamsPage from "./pages/MyTeamsPage";
 import TeamLeadDashboard from "./pages/TeamLeadDashboard";
+import RoomsPage from "./pages/RoomsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -65,6 +66,7 @@ function AppRoutes() {
       <Route path="/assignments" element={<PrivateRoute><AssignmentsPage /></PrivateRoute>} />
       <Route path="/final-list" element={<PrivateRoute><FinalListPage /></PrivateRoute>} />
       <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
+      <Route path="/rooms" element={<PrivateRoute><RoomsPage /></PrivateRoute>} />
       <Route path="/my-teams" element={<PrivateRoute><MyTeamsPage /></PrivateRoute>} />
       <Route path="/search-assistant" element={<PrivateRoute><SearchAssistantPage /></PrivateRoute>} />
       <Route path="/404" element={<NotFound />} />

@@ -33,7 +33,7 @@ export async function exportAssignmentsPdf(req: Request, res: Response): Promise
         const team = s.teamId as any;
         return team && zones.includes(team.zone);
       });
-    } else if (user.role === "user") {
+    } else if (user.role === "user" || user.role === "hotel_person") {
       res.status(403).json({ error: "Forbidden" });
       return;
     }

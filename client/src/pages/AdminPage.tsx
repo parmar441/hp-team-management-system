@@ -10,7 +10,14 @@ import {
   useDeleteAreaAssignment,
   useAuditLog,
   useCreateCredential,
+  useCreateHotelPersonCredential,
+  useDeleteHotelPersonCredential,
+  useRegenerateHotelPersonPassword,
+  useHotelPersonAssignments,
+  useCreateHotelPersonAssignment,
+  useDeleteHotelPersonAssignment,
 } from "../hooks/useAdmin";
+import { useTournaments } from "../hooks/useTournaments";
 import { useDynamicZoneNames } from "../hooks/useDynamicZones";
 import {
   Select,
@@ -28,9 +35,11 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  Hotel,
+  RefreshCw,
 } from "lucide-react";
 
-type AdminTab = "users" | "zones" | "areas" | "audit" | "credentials";
+type AdminTab = "users" | "zones" | "areas" | "audit" | "credentials" | "hotel-persons";
 
 export default function AdminPage() {
   const [tab, setTab] = useState<AdminTab>("users");
@@ -56,6 +65,11 @@ export default function AdminPage() {
       id: "credentials",
       label: "Credentials",
       icon: <KeyRound className="w-4 h-4" />,
+    },
+    {
+      id: "hotel-persons",
+      label: "Hotel Persons",
+      icon: <Hotel className="w-4 h-4" />,
     },
   ];
 
@@ -91,6 +105,7 @@ export default function AdminPage() {
       {tab === "areas" && <AreasTab />}
       {tab === "audit" && <AuditTab />}
       {tab === "credentials" && <CredentialsTab />}
+      {tab === "hotel-persons" && <HotelPersonsTab />}
     </div>
   );
 }
@@ -151,7 +166,7 @@ function UsersTab() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {["user", "admin", "zone_lead", "area_lead"].map(
+                        {["user", "admin", "zone_lead", "area_lead", "hotel_person"].map(
                           (r) => (
                             <SelectItem key={r} value={r}>
                               {r.replace("_", " ")}
@@ -641,6 +656,237 @@ function CredentialsTab() {
               : "Create Credentials"}
           </button>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function HotelPersonsTab() {
+  const { data: users } = useAdminUsers();
+  const { data: hotels } = useTournaments();
+  const { data: assignments, isLoading: assignmentsLoading } = useHotelPersonAssignments();
+  const createCredential = useCreateHotelPersonCredential();
+  const deleteCredential = useDeleteHotelPersonCredential();
+  const regeneratePassword = useRegenerateHotelPersonPassword();
+  const createAssignment = useCreateHotelPersonAssignment();
+  const deleteAssignment = useDeleteHotelPersonAssignment();
+
+  const [credForm, setCredForm] = useState({ username: "", password: "" });
+  const [assignForm, setAssignForm] = useState({ userId: "", hotelId: "" });
+  const [regenForm, setRegenForm] = useState<{ id: string; password: string } | null>(null);
+  const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
+
+  const hotelPersonUsers = (users ?? []).filter((u: any) => u.role === "hotel_person");
+
+  async function handleCreateCredential(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    try {
+      await createCredential.mutateAsync(credForm);
+      setSuccess(`Hotel person "${credForm.username}" created successfully`);
+      setCredForm({ username: "", password: "" });
+    } catch (err: any) {
+      setError(err?.response?.data?.error || "Failed to create hotel person");
+    }
+  }
+
+  async function handleAssignHotel(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      await createAssignment.mutateAsync(assignForm);
+      setAssignForm({ userId: "", hotelId: "" });
+    } catch (err: any) {
+      setError(err?.response?.data?.error || "Failed to assign hotel");
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Generate Credentials */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 max-w-md">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Generate Hotel Person Credentials</h3>
+        <form onSubmit={handleCreateCredential} className="space-y-3">
+          <input
+            value={credForm.username}
+            onChange={(e) => setCredForm((f) => ({ ...f, username: e.target.value }))}
+            placeholder="Username"
+            required
+            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
+          <input
+            type="password"
+            value={credForm.password}
+            onChange={(e) => setCredForm((f) => ({ ...f, password: e.target.value }))}
+            placeholder="Password"
+            required
+            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          {success && <p className="text-sm text-green-600">{success}</p>}
+          <button
+            type="submit"
+            disabled={createCredential.isPending}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50 transition-colors"
+          >
+            {createCredential.isPending ? "Creating..." : "Generate Credentials"}
+          </button>
+        </form>
+      </div>
+
+      {/* Assign Hotel */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 max-w-md">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Assign Hotel to Hotel Person</h3>
+        <form onSubmit={handleAssignHotel} className="flex gap-3">
+          <Select value={assignForm.userId} onValueChange={(v) => setAssignForm((f) => ({ ...f, userId: v }))}>
+            <SelectTrigger className="flex-1 rounded-xl border-gray-200 text-sm h-[42px]">
+              <SelectValue placeholder="Select hotel person" />
+            </SelectTrigger>
+            <SelectContent>
+              {hotelPersonUsers.map((u: any) => (
+                <SelectItem key={u._id} value={u._id}>{u.name || u.openId}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={assignForm.hotelId} onValueChange={(v) => setAssignForm((f) => ({ ...f, hotelId: v }))}>
+            <SelectTrigger className="flex-1 rounded-xl border-gray-200 text-sm h-[42px]">
+              <SelectValue placeholder="Select hotel" />
+            </SelectTrigger>
+            <SelectContent>
+              {(hotels ?? []).map((h: any) => (
+                <SelectItem key={h._id} value={h._id}>{h.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <button
+            type="submit"
+            disabled={!assignForm.userId || !assignForm.hotelId || createAssignment.isPending}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50 transition-colors"
+          >
+            Assign
+          </button>
+        </form>
+      </div>
+
+      {/* Hotel Person Assignments List */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-900">Hotel Person Assignments</h3>
+        </div>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50/80">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Hotel Person</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Hotel</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {assignmentsLoading
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <tr key={i}>
+                    {Array.from({ length: 3 }).map((_, j) => (
+                      <td key={j} className="px-4 py-3"><div className="h-4 w-full bg-gray-100 rounded-lg animate-pulse" /></td>
+                    ))}
+                  </tr>
+                ))
+              : (assignments ?? []).map((a: any) => (
+                  <tr key={a._id} className="hover:bg-indigo-50/30 transition-colors">
+                    <td className="px-4 py-3 font-medium text-gray-900">{a.userId?.name || a.userId?.openId || "—"}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
+                        {a.hotelId?.name || "—"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => deleteAssignment.mutate(a._id)}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Hotel Persons List with delete/regenerate actions */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-900">All Hotel Persons</h3>
+        </div>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50/80">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Assigned Hotels</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {hotelPersonUsers.map((u: any) => {
+              const userAssignments = (assignments ?? []).filter((a: any) => a.userId?._id === u._id);
+              return (
+                <tr key={u._id} className="hover:bg-indigo-50/30 transition-colors">
+                  <td className="px-4 py-3 font-medium text-gray-900">{u.name || u.openId}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {userAssignments.length > 0
+                        ? userAssignments.map((a: any) => (
+                            <span key={a._id} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
+                              {a.hotelId?.name || "—"}
+                            </span>
+                          ))
+                        : <span className="text-gray-400 text-xs">None</span>}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right flex items-center justify-end gap-1">
+                    {regenForm?.id === u._id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="password"
+                          value={regenForm?.password ?? ""}
+                          onChange={(e) => setRegenForm({ id: u._id, password: e.target.value })}
+                          placeholder="New password"
+                          className="w-32 px-2 py-1 rounded-lg border border-gray-200 text-xs"
+                        />
+                        <button
+                          onClick={async () => {
+                            if (!regenForm) return;
+                            await regeneratePassword.mutateAsync({ id: u._id, password: regenForm.password });
+                            setRegenForm(null);
+                          }}
+                          className="text-xs bg-indigo-600 text-white px-2 py-1 rounded-lg"
+                        >
+                          Save
+                        </button>
+                        <button onClick={() => setRegenForm(null)} className="text-xs text-gray-500 px-1">Cancel</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setRegenForm({ id: u._id, password: "" })}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors"
+                        title="Regenerate password"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => deleteCredential.mutate(u._id)}
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+                      title="Delete hotel person"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );

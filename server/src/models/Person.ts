@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 export const GENDERS = ["M", "F"] as const;
 export const ACO_OPTIONS = ["Yes", "No"] as const;
+export const CHECKED_IN_OPTIONS = ["Yes", "No"] as const;
 export const AGE_RANGES = ["0-6", "7-14", "15-45", "46-65", "65+"] as const;
 
 const personSchema = new mongoose.Schema(
@@ -24,6 +25,7 @@ const personSchema = new mongoose.Schema(
     name:       { type: String, maxlength: 255 },
     category:   { type: String, maxlength: 255 },
     note:       { type: String },
+    checkedIn:  { type: String, enum: CHECKED_IN_OPTIONS },
   },
   { timestamps: true }
 );
@@ -37,14 +39,34 @@ personSchema.virtual("isAcoPlayer").get(function () {
   return this.acoNeeded === "Yes";
 });
 
+personSchema.virtual("isCheckedIn").get(function () {
+  return this.checkedIn === "Yes";
+});
+
 personSchema.virtual("displayLabel").get(function () {
   return `${[this.firstName, this.lastName].filter(Boolean).join(" ")} (${this.zone || "Unassigned"})`;
 });
+
+// Query Helpers
+(personSchema.query as any).acoPlayers = function (this: any) {
+  return this.where({ acoNeeded: "Yes" });
+};
+(personSchema.query as any).inZones = function (this: any, zones: string[]) {
+  return this.where({ zone: { $in: zones } });
+};
+(personSchema.query as any).searchByName = function (this: any, term: string) {
+  const regex = new RegExp(term, "i");
+  return this.where({ $or: [{ firstName: regex }, { lastName: regex }, { name: regex }] });
+};
+(personSchema.query as any).checkedIn = function (this: any) {
+  return this.where({ checkedIn: "Yes" });
+};
 
 // Indexes
 personSchema.index({ zone: 1 });
 personSchema.index({ area: 1 });
 personSchema.index({ acoNeeded: 1 });
+personSchema.index({ checkedIn: 1 });
 personSchema.index({ memberId: 1 }, { unique: true, sparse: true });
 personSchema.index({ firstName: "text", lastName: "text", name: "text" });
 

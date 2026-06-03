@@ -6,7 +6,7 @@ export interface User {
   openId: string;
   name?: string;
   email?: string;
-  role: "user" | "admin" | "zone_lead" | "area_lead";
+  role: "user" | "admin" | "zone_lead" | "area_lead" | "hotel_person";
   lastSignedIn?: string;
 }
 

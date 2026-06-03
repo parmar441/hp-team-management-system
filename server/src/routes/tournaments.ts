@@ -2,13 +2,20 @@ import { Router, Request, Response } from "express";
 import { Tournament } from "../models/Tournament.js";
 import { TournamentSlot } from "../models/TournamentSlot.js";
 import { Team } from "../models/Team.js";
-import { requireAdmin } from "../middleware/auth.js";
+import { HotelPersonAssignment } from "../models/HotelPersonAssignment.js";
+import { requireAuth, requireAdmin } from "../middleware/auth.js";
 
 const router = Router();
 
-// GET /api/tournaments
-router.get("/", requireAdmin, async (_req: Request, res: Response): Promise<void> => {
+// GET /api/tournaments — scoped for hotel_person to assigned hotels only
+router.get("/", requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
+    if (req.user?.role === "hotel_person") {
+      const hotelIds = await HotelPersonAssignment.find({ userId: req.user.id }).distinct("hotelId");
+      const tournaments = await Tournament.find({ _id: { $in: hotelIds } }).sort({ name: 1 });
+      res.json(tournaments);
+      return;
+    }
     const tournaments = await Tournament.find().sort({ name: 1 });
     res.json(tournaments);
   } catch (err: any) {

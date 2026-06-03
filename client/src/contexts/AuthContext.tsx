@@ -4,7 +4,7 @@ export interface AuthUser {
   id: number;
   name: string | null;
   email: string | null;
-  role: "user" | "admin" | "zone_lead" | "area_lead";
+  role: "user" | "admin" | "zone_lead" | "area_lead" | "hotel_person";
   openId: string;
 }
 

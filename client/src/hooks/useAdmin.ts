@@ -88,3 +88,55 @@ export function useDeleteCredential() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin"] }),
   });
 }
+
+// ── Hotel Person Management ─────────────────────────────────────────────────
+
+export function useCreateHotelPersonCredential() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { username: string; password: string }) =>
+      api.post("/admin/hotel-person/credentials", data).then((r) => r.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin"] }),
+  });
+}
+
+export function useDeleteHotelPersonCredential() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/admin/hotel-person/credentials/${id}`).then((r) => r.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin"] }),
+  });
+}
+
+export function useRegenerateHotelPersonPassword() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, password }: { id: string; password: string }) =>
+      api.patch(`/admin/hotel-person/credentials/${id}/regenerate`, { password }).then((r) => r.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin"] }),
+  });
+}
+
+export function useHotelPersonAssignments() {
+  return useQuery({
+    queryKey: ["admin", "hotel-person-assignments"],
+    queryFn: () => api.get("/admin/hotel-person/assignments").then((r) => r.data),
+  });
+}
+
+export function useCreateHotelPersonAssignment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { userId: string; hotelId: string }) =>
+      api.post("/admin/hotel-person/assignments", data).then((r) => r.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin"] }),
+  });
+}
+
+export function useDeleteHotelPersonAssignment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/admin/hotel-person/assignments/${id}`).then((r) => r.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin"] }),
+  });
+}

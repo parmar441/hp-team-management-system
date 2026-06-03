@@ -25,6 +25,7 @@ import registrationsRoutes from "./routes/registrations.js";
 import dynamicZonesRoutes from "./routes/dynamicZones.js";
 import dynamicAreasRoutes from "./routes/dynamicAreas.js";
 import searchAssistantRoutes from "./routes/searchAssistant.js";
+import hotelRoomsRoutes from "./routes/hotelRooms.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -51,6 +52,12 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 app.use("/api", generalLimiter);
 
+// ── Bulk rate limiter for specific endpoints ────────────────────────────────
+app.post("/api/people/bulk-delete", bulkLimiter);
+app.patch("/api/people/bulk-toggle-aco", bulkLimiter);
+app.patch("/api/people/bulk-check-in", bulkLimiter);
+app.post("/api/tournaments/:id/bulk-assign", bulkLimiter);
+
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/people", writeLimiter, peopleRoutes);
@@ -64,6 +71,7 @@ app.use("/api/registrations", registrationsRoutes);
 app.use("/api/dynamic-zones", dynamicZonesRoutes);
 app.use("/api/dynamic-areas", dynamicAreasRoutes);
 app.use("/api/search-assistant", searchAssistantRoutes);
+app.use("/api/hotel-rooms", hotelRoomsRoutes);
 
 // ── PDF Export ────────────────────────────────────────────────────────────────
 app.get("/api/export/assignments-pdf", exportLimiter, async (req, res) => {

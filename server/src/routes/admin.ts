@@ -5,6 +5,7 @@ import { ZoneAssignment } from "../models/ZoneAssignment.js";
 import { AreaAssignment } from "../models/AreaAssignment.js";
 import { AuditLog } from "../models/AuditLog.js";
 import { LeadCredential } from "../models/LeadCredential.js";
+import { HotelPersonAssignment } from "../models/HotelPersonAssignment.js";
 import { DynamicZone } from "../models/DynamicZone.js";
 import { requireAdmin } from "../middleware/auth.js";
 
@@ -162,6 +163,82 @@ router.post("/credentials", requireAdmin, async (req: Request, res: Response): P
 router.delete("/credentials/:id", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   try {
     await LeadCredential.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Hotel Person Credential Management ──────────────────────────────────────
+
+// POST /api/admin/hotel-person/credentials — create hotel person user with credentials
+router.post("/hotel-person/credentials", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { username, password } = req.body;
+    const passwordHash = await bcrypt.hash(password, 12);
+    const openId = `hp_${username}_${Date.now()}`;
+    const user = await User.create({ openId, name: username, role: "hotel_person", loginMethod: "credential" });
+    const credential = await LeadCredential.create({ userId: user._id, username, passwordHash, createdBy: req.user!.id });
+    res.status(201).json({ id: credential._id, userId: user._id, username });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// DELETE /api/admin/hotel-person/credentials/:id — delete hotel person credentials and user
+router.delete("/hotel-person/credentials/:id", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const credential = await LeadCredential.findById(req.params.id);
+    if (!credential) { res.status(404).json({ error: "Not found" }); return; }
+    await HotelPersonAssignment.deleteMany({ userId: credential.userId });
+    await LeadCredential.findByIdAndDelete(req.params.id);
+    await User.findByIdAndDelete(credential.userId);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/admin/hotel-person/credentials/:id/regenerate — regenerate password
+router.patch("/hotel-person/credentials/:id/regenerate", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { password } = req.body;
+    const passwordHash = await bcrypt.hash(password, 12);
+    const credential = await LeadCredential.findByIdAndUpdate(req.params.id, { passwordHash }, { new: true });
+    if (!credential) { res.status(404).json({ error: "Not found" }); return; }
+    res.json({ success: true, username: credential.username });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ── Hotel Person Assignment Management ──────────────────────────────────────
+
+// GET /api/admin/hotel-person/assignments — list all hotel-person-to-hotel assignments
+router.get("/hotel-person/assignments", requireAdmin, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const assignments = await HotelPersonAssignment.find().populate("userId").populate("hotelId");
+    res.json(assignments);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/hotel-person/assignments — assign a hotel to a hotel person
+router.post("/hotel-person/assignments", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId, hotelId } = req.body;
+    const assignment = await HotelPersonAssignment.create({ userId, hotelId });
+    res.status(201).json(assignment);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// DELETE /api/admin/hotel-person/assignments/:id — remove hotel assignment from hotel person
+router.delete("/hotel-person/assignments/:id", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    await HotelPersonAssignment.findByIdAndDelete(req.params.id);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
