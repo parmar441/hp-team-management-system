@@ -32,19 +32,19 @@ export default function DynamicZonesPage() {
 
   return (
     <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-violet-100 flex items-center justify-center">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-0 sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
             <MapPin className="w-5 h-5 text-violet-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Dynamic Zones</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dynamic Zones</h1>
             <p className="text-gray-500 text-sm">Configure zones and field-to-zone mapping rules</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
-            className="border border-gray-200 bg-white rounded-xl hover:bg-gray-50 text-gray-600 px-4 py-2.5 text-sm font-semibold transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
+            className="border border-gray-200 bg-white rounded-xl hover:bg-gray-50 text-gray-600 px-3 sm:px-4 py-2.5 text-sm font-semibold transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
             disabled={reapply.isPending}
             onClick={() => reapply.mutate(undefined, {
               onSuccess: () => toast.success("Zone rules reapplied — people reassigned"),
@@ -52,10 +52,11 @@ export default function DynamicZonesPage() {
             })}
           >
             <RefreshCw className={`w-4 h-4 ${reapply.isPending ? "animate-spin" : ""}`} />
-            Reapply Rules
+            <span className="hidden sm:inline">Reapply Rules</span>
+            <span className="sm:hidden">Reapply</span>
           </button>
           <button
-            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors inline-flex items-center gap-1.5"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-3 sm:px-4 py-2.5 text-sm font-semibold transition-colors inline-flex items-center gap-1.5"
             onClick={() => setShowCreate(true)}
           >
             <Plus className="w-4 h-4" /> Add Zone
