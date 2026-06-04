@@ -2,6 +2,7 @@ import { useState } from "react";
 import { usePeople, type Person } from "../hooks/usePeople";
 import { useDynamicZoneNames } from "../hooks/useDynamicZones";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { useDebounce } from "../hooks/useDebounce";
 import { List, Download, Search, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function ListPage() {
@@ -9,7 +10,8 @@ export default function ListPage() {
   const [search, setSearch] = useState("");
   const [zoneFilter, setZoneFilter] = useState("");
 
-  const { data, isLoading } = usePeople({ acoNeeded: "Yes", search, zone: zoneFilter, page, pageSize: 50 });
+  const debouncedSearch = useDebounce(search, 350);
+  const { data, isLoading } = usePeople({ acoNeeded: "Yes", search: debouncedSearch, zone: zoneFilter, page, pageSize: 50 });
   const { data: zoneNames } = useDynamicZoneNames();
 
   const people: Person[] = data?.people ?? [];

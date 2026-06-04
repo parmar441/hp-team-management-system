@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+import { useDebounce } from "../hooks/useDebounce";
 import { FileText, Download, Search, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function FinalListPage() {
@@ -16,6 +17,7 @@ export default function FinalListPage() {
   const [search, setSearch] = useState("");
   const [zoneFilter, setZoneFilter] = useState("");
   const [hotelFilter, setHotelFilter] = useState("");
+  const debouncedSearch = useDebounce(search, 350);
 
   const allSlots = slots ?? [];
   const hotelNames = [
@@ -49,8 +51,8 @@ export default function FinalListPage() {
   });
 
   const filtered = allRows.filter((row) => {
-    if (search) {
-      const s = search.toLowerCase();
+    if (debouncedSearch) {
+      const s = debouncedSearch.toLowerCase();
       if (
         !row.fullName.toLowerCase().includes(s) &&
         !row.mandal.toLowerCase().includes(s)

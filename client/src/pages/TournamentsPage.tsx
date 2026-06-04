@@ -1,11 +1,18 @@
 import { useState } from "react";
-import { useTournaments, useCreateTournament, useDeleteTournament, useTournament, useAssignTeam, useUnassignTeam, useUpdateSlotRoom, useAvailableTeams, type Tournament, type TournamentSlot } from "../hooks/useTournaments";
+import {
+  useTournaments, useCreateTournament, useDeleteTournament,
+  useTournament, useAssignTeam, useUnassignTeam, useUpdateSlotRoom,
+  useAvailableTeams, type Tournament, type TournamentSlot,
+} from "../hooks/useTournaments";
 import type { Team } from "../hooks/useTeams";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { ConfirmDialog } from "../components/ui/confirm-dialog";
+import { useToast } from "../components/ui/toaster";
 import { Hotel, Plus, Trash2, ChevronRight, DoorOpen, Edit2, Check, X, ArrowLeft } from "lucide-react";
 
 function SlotRow({ slot, tournamentId }: { slot: TournamentSlot; tournamentId: string }) {
+  const toast = useToast();
   const assignTeam = useAssignTeam();
   const unassignTeam = useUnassignTeam();
   const updateRoom = useUpdateSlotRoom();
@@ -17,9 +24,11 @@ function SlotRow({ slot, tournamentId }: { slot: TournamentSlot; tournamentId: s
   const team = slot.teamId as Team | null;
 
   return (
-    <tr className="divide-y divide-gray-50 hover:bg-indigo-50/30 transition-colors">
+    <tr className="hover:bg-indigo-50/30 transition-colors">
       <td className="px-4 py-3 text-sm text-gray-500">#{slot.slotNumber}</td>
-      <td className="px-4 py-3 text-sm font-medium text-gray-900">{team ? team.name : <span className="text-gray-400">Vacant</span>}</td>
+      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+        {team ? team.name : <span className="text-gray-400 italic">Vacant</span>}
+      </td>
       <td className="px-4 py-3 text-sm text-gray-500">{team?.zone || "—"}</td>
       <td className="px-4 py-3 text-sm text-gray-600">{team ? `${team.members?.length ?? 0} members` : "—"}</td>
       <td className="px-4 py-3">
@@ -31,8 +40,19 @@ function SlotRow({ slot, tournamentId }: { slot: TournamentSlot; tournamentId: s
               className="h-7 w-24 text-sm px-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               autoFocus
             />
-            <button onClick={async () => { await updateRoom.mutateAsync({ slotId: slot._id, roomNumber: room }); setEditRoom(false); }} className="text-green-600 hover:text-green-700"><Check className="w-4 h-4" /></button>
-            <button onClick={() => setEditRoom(false)} className="text-gray-400 hover:text-gray-700"><X className="w-4 h-4" /></button>
+            <button
+              onClick={async () => {
+                await updateRoom.mutateAsync({ slotId: slot._id, roomNumber: room });
+                toast.success("Room number saved");
+                setEditRoom(false);
+              }}
+              className="text-green-600 hover:text-green-700"
+            >
+              <Check className="w-4 h-4" />
+            </button>
+            <button onClick={() => setEditRoom(false)} className="text-gray-400 hover:text-gray-700">
+              <X className="w-4 h-4" />
+            </button>
           </div>
         ) : (
           <button onClick={() => setEditRoom(true)} className="flex items-center gap-1 text-sm group">
@@ -45,7 +65,10 @@ function SlotRow({ slot, tournamentId }: { slot: TournamentSlot; tournamentId: s
       <td className="px-4 py-3 relative">
         {team ? (
           <button
-            onClick={() => unassignTeam.mutate({ tournamentId, slotId: slot._id })}
+            onClick={() => unassignTeam.mutate({ tournamentId, slotId: slot._id }, {
+              onSuccess: () => toast.success("Team removed from slot"),
+              onError: () => toast.error("Failed to remove team"),
+            })}
             className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700 font-medium"
           >
             <X className="w-3.5 h-3.5" /> Remove
@@ -59,20 +82,30 @@ function SlotRow({ slot, tournamentId }: { slot: TournamentSlot; tournamentId: s
               Assign Team
             </button>
             {showAssign && (
-              <div className="absolute z-10 bg-white border border-gray-100 rounded-xl shadow-lg p-3 mt-1 w-56">
-                <p className="text-xs font-medium text-gray-700 mb-2">Select team:</p>
+              <div className="absolute z-10 bg-white border border-gray-100 rounded-xl shadow-elevated p-3 mt-1 w-56">
+                <p className="text-xs font-semibold text-gray-700 mb-2">Select team:</p>
                 {(availableTeams ?? []).slice(0, 10).map((t: Team) => (
                   <button
                     key={t._id}
                     className="w-full text-left text-sm px-2 py-1.5 hover:bg-indigo-50 rounded-lg text-gray-700 transition-colors"
-                    onClick={async () => { await assignTeam.mutateAsync({ tournamentId, slotId: slot._id, teamId: t._id }); setShowAssign(false); }}
+                    onClick={async () => {
+                      await assignTeam.mutateAsync({ tournamentId, slotId: slot._id, teamId: t._id });
+                      toast.success(`${t.name} assigned to slot #${slot.slotNumber}`);
+                      setShowAssign(false);
+                    }}
                   >
                     {t.name} <span className="text-xs text-gray-400">({t.members?.length ?? 0} members)</span>
                   </button>
                 ))}
                 {(availableTeams ?? []).length === 0 && (
-                  <p className="text-xs text-gray-400 py-1">No teams available</p>
+                  <p className="text-xs text-gray-400 py-1">No unassigned teams available</p>
                 )}
+                <button
+                  onClick={() => setShowAssign(false)}
+                  className="w-full text-center text-xs text-gray-400 hover:text-gray-600 pt-2 mt-1 border-t border-gray-50"
+                >
+                  Cancel
+                </button>
               </div>
             )}
           </>
@@ -95,10 +128,10 @@ function TournamentDetail({ id, onBack }: { id: string; onBack: () => void }) {
           onClick={onBack}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-200 bg-white rounded-xl hover:bg-gray-50 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" /> Back
+          <ArrowLeft className="w-4 h-4" /> Back to Hotels
         </button>
         {isLoading ? (
-          <div className="space-y-2">
+          <div className="space-y-1">
             <div className="h-5 w-40 bg-gray-100 rounded-lg animate-pulse" />
             <div className="h-4 w-24 bg-gray-100 rounded-lg animate-pulse" />
           </div>
@@ -108,19 +141,32 @@ function TournamentDetail({ id, onBack }: { id: string; onBack: () => void }) {
             <p className="text-sm text-gray-500">{occupied}/{tournament?.totalSlots} slots occupied</p>
           </div>
         )}
+        {!isLoading && (
+          <div className="ml-auto">
+            <div className="flex items-center gap-2 text-sm">
+              <div className="h-2 rounded-full bg-gray-100 w-32 overflow-hidden">
+                <div
+                  className="h-full bg-indigo-500 rounded-full transition-all"
+                  style={{ width: `${tournament?.totalSlots ? (occupied / tournament.totalSlots) * 100 : 0}%` }}
+                />
+              </div>
+              <span className="text-gray-500 text-xs">{Math.round(tournament?.totalSlots ? (occupied / tournament.totalSlots) * 100 : 0)}% filled</span>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50/80">
+            <thead className="bg-gray-50/80 border-b border-gray-100">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Slot</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Team</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Zone</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Members</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Room</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Slot</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Team</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Zone</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Members</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Room</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -144,18 +190,28 @@ function TournamentDetail({ id, onBack }: { id: string; onBack: () => void }) {
 }
 
 export default function TournamentsPage() {
+  const toast = useToast();
   const { data: tournaments, isLoading } = useTournaments();
   const createTournament = useCreateTournament();
   const deleteTournament = useDeleteTournament();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState<{ name: string; address: string; totalSlots: string; status: "upcoming" | "not_available" | "available" }>({ name: "", address: "", totalSlots: "8", status: "upcoming" });
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [form, setForm] = useState<{
+    name: string; address: string; totalSlots: string;
+    status: "upcoming" | "not_available" | "available";
+  }>({ name: "", address: "", totalSlots: "8", status: "upcoming" });
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    await createTournament.mutateAsync({ ...form, totalSlots: parseInt(form.totalSlots, 10) });
-    setShowCreate(false);
-    setForm({ name: "", address: "", totalSlots: "8", status: "upcoming" });
+    try {
+      await createTournament.mutateAsync({ ...form, totalSlots: parseInt(form.totalSlots, 10) });
+      toast.success(`Hotel "${form.name}" added`);
+      setShowCreate(false);
+      setForm({ name: "", address: "", totalSlots: "8", status: "upcoming" });
+    } catch {
+      toast.error("Failed to add hotel");
+    }
   }
 
   if (selectedId) {
@@ -180,7 +236,7 @@ export default function TournamentsPage() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" /> Add Hotel
         </button>
@@ -204,7 +260,13 @@ export default function TournamentsPage() {
             <Hotel className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-1">No hotels yet</h3>
-          <p className="text-sm text-gray-500">Add your first hotel to start managing slots.</p>
+          <p className="text-sm text-gray-500 mb-5">Add your first hotel to start managing team slots.</p>
+          <button
+            onClick={() => setShowCreate(true)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors"
+          >
+            <Plus className="w-4 h-4" /> Add First Hotel
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -233,8 +295,9 @@ export default function TournamentsPage() {
                     {t.status.replace("_", " ")}
                   </span>
                   <button
-                    onClick={() => deleteTournament.mutate(t._id)}
+                    onClick={(e) => { e.stopPropagation(); setDeleteId(t._id); }}
                     className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+                    title="Delete hotel"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -251,9 +314,10 @@ export default function TournamentsPage() {
         </div>
       )}
 
+      {/* Create Hotel Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Add Hotel</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-lg font-bold">Add Hotel</DialogTitle></DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4 pt-2">
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-gray-700">Hotel Name *</label>
@@ -261,8 +325,8 @@ export default function TournamentsPage() {
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 required
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 placeholder="Enter hotel name"
+                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
             <div className="space-y-1.5">
@@ -270,33 +334,33 @@ export default function TournamentsPage() {
               <input
                 value={form.address}
                 onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 placeholder="Enter address"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-gray-700">Total Slots</label>
-              <input
-                type="number"
-                min="1"
-                max="100"
-                value={form.totalSlots}
-                onChange={(e) => setForm((f) => ({ ...f, totalSlots: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-gray-700">Status</label>
-              <Select value={form.status} onValueChange={(v) => setForm((f) => ({ ...f, status: v as typeof f.status }))}>
-                <SelectTrigger className="w-full rounded-xl">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="upcoming">Upcoming</SelectItem>
-                  <SelectItem value="available">Available</SelectItem>
-                  <SelectItem value="not_available">Not Available</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">Total Slots</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={form.totalSlots}
+                  onChange={(e) => setForm((f) => ({ ...f, totalSlots: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">Status</label>
+                <Select value={form.status} onValueChange={(v) => setForm((f) => ({ ...f, status: v as typeof f.status }))}>
+                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="upcoming">Upcoming</SelectItem>
+                    <SelectItem value="available">Available</SelectItem>
+                    <SelectItem value="not_available">Not Available</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex gap-2 justify-end pt-2">
               <button
@@ -309,7 +373,7 @@ export default function TournamentsPage() {
               <button
                 type="submit"
                 disabled={createTournament.isPending}
-                className="px-4 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors shadow-sm disabled:opacity-50"
+                className="px-4 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors shadow-sm disabled:opacity-50"
               >
                 {createTournament.isPending ? "Creating..." : "Create Hotel"}
               </button>
@@ -317,6 +381,23 @@ export default function TournamentsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Hotel Confirmation */}
+      <ConfirmDialog
+        open={deleteId !== null}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title="Delete Hotel"
+        description="This hotel and all its slot assignments will be permanently deleted. Teams will be released back to the available pool."
+        confirmLabel="Delete Hotel"
+        onConfirm={() => {
+          if (!deleteId) return;
+          deleteTournament.mutate(deleteId, {
+            onSuccess: () => { toast.success("Hotel deleted"); setDeleteId(null); },
+            onError: () => { toast.error("Failed to delete hotel"); setDeleteId(null); },
+          });
+        }}
+        loading={deleteTournament.isPending}
+      />
     </div>
   );
 }

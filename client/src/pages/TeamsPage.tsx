@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useTeams, useAvailablePeople, useCreateTeam, useDeleteTeam, useAddTeamMembers, useRemoveTeamMembers, type Team } from "../hooks/useTeams";
 import type { Person } from "../hooks/usePeople";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
+import { ConfirmDialog } from "../components/ui/confirm-dialog";
+import { useToast } from "../components/ui/toaster";
 import { UsersRound, Plus, Trash2, UserMinus, UserPlus, Search, X, CheckCircle2 } from "lucide-react";
 
 function getZoneColor(zone?: string | null) {
@@ -18,12 +20,22 @@ function getZoneColor(zone?: string | null) {
   return palette[hash % palette.length];
 }
 
-function TeamCard({ team, onDelete, availablePeople }: { team: Team; onDelete: () => void; availablePeople: Person[] }) {
+function TeamCard({
+  team,
+  onDelete,
+  availablePeople,
+}: {
+  team: Team;
+  onDelete: () => void;
+  availablePeople: Person[];
+}) {
+  const toast = useToast();
   const addMembers = useAddTeamMembers();
   const removeMembers = useRemoveTeamMembers();
   const [adding, setAdding] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
 
   const capacity = 8;
   const count = team.members.length;
@@ -36,7 +48,12 @@ function TeamCard({ team, onDelete, availablePeople }: { team: Team; onDelete: (
   }
 
   async function handleAdd() {
-    await addMembers.mutateAsync({ id: team._id, members: [...selected] });
+    try {
+      await addMembers.mutateAsync({ id: team._id, members: [...selected] });
+      toast.success(`${selected.size} member${selected.size > 1 ? "s" : ""} added to ${team.name}`);
+    } catch {
+      toast.error("Failed to add members");
+    }
     setSelected(new Set());
     setAdding(false);
     setSearch("");
@@ -99,16 +116,12 @@ function TeamCard({ team, onDelete, availablePeople }: { team: Team; onDelete: (
                   <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold text-gray-500 flex-shrink-0">
                     {i + 1}
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">{`${m.firstName} ${m.lastName || ""}`.trim()}</p>
-                  </div>
+                  <p className="text-sm font-medium text-gray-800">{`${m.firstName} ${m.lastName || ""}`.trim()}</p>
                 </div>
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {m.zone && (
-                    <span className="text-xs text-gray-400">{m.zone}</span>
-                  )}
+                  {m.zone && <span className="text-xs text-gray-400">{m.zone}</span>}
                   <button
-                    onClick={() => removeMembers.mutate({ id: team._id, members: [m._id] })}
+                    onClick={() => setRemovingMemberId(m._id)}
                     className="p-1 rounded text-gray-300 hover:text-red-500 transition-colors"
                     title="Remove member"
                   >
@@ -170,20 +183,36 @@ function TeamCard({ team, onDelete, availablePeople }: { team: Team; onDelete: (
                   onClick={handleAdd}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold transition-colors"
                 >
-                  {addMembers.isPending ? "Adding..." : <>
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Add
-                  </>}
+                  {addMembers.isPending ? "Adding..." : <><CheckCircle2 className="w-3.5 h-3.5" /> Add</>}
                 </button>
               </div>
             </div>
           )}
         </div>
       )}
+
+      {/* Remove Member Confirmation */}
+      <ConfirmDialog
+        open={removingMemberId !== null}
+        onOpenChange={(open) => !open && setRemovingMemberId(null)}
+        title="Remove Member"
+        description={`Remove this person from ${team.name}? They will become available for other teams.`}
+        confirmLabel="Remove"
+        onConfirm={() => {
+          if (!removingMemberId) return;
+          removeMembers.mutate({ id: team._id, members: [removingMemberId] }, {
+            onSuccess: () => { toast.success("Member removed"); setRemovingMemberId(null); },
+            onError: () => { toast.error("Failed to remove member"); setRemovingMemberId(null); },
+          });
+        }}
+        loading={removeMembers.isPending}
+      />
     </div>
   );
 }
 
 export default function TeamsPage() {
+  const toast = useToast();
   const { data: teams, isLoading } = useTeams();
   const { data: availablePeople } = useAvailablePeople();
   const createTeam = useCreateTeam();
@@ -191,6 +220,7 @@ export default function TeamsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [newSelected, setNewSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+  const [deleteTeamId, setDeleteTeamId] = useState<string | null>(null);
 
   const available: Person[] = availablePeople ?? [];
   const filtered = available.filter((p) =>
@@ -203,7 +233,12 @@ export default function TeamsPage() {
 
   async function handleCreate() {
     if (newSelected.size < 2) return;
-    await createTeam.mutateAsync({ members: [...newSelected] });
+    try {
+      await createTeam.mutateAsync({ members: [...newSelected] });
+      toast.success("Team created successfully");
+    } catch {
+      toast.error("Failed to create team");
+    }
     setNewSelected(new Set());
     setSearch("");
     setShowCreate(false);
@@ -249,7 +284,11 @@ export default function TeamsPage() {
             <UsersRound className="w-7 h-7 text-gray-400" />
           </div>
           <h3 className="font-semibold text-gray-700 mb-1">No teams yet</h3>
-          <p className="text-sm text-gray-400 mb-5">Create your first team by selecting ACO players.</p>
+          <p className="text-sm text-gray-400 mb-5">
+            {available.length === 0
+              ? "Add people with ACO status first, then create teams here."
+              : "Create your first team by selecting 2–8 ACO players."}
+          </p>
           <button
             onClick={() => setShowCreate(true)}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
@@ -264,7 +303,7 @@ export default function TeamsPage() {
               key={team._id}
               team={team}
               availablePeople={available}
-              onDelete={() => deleteTeam.mutate(team._id)}
+              onDelete={() => setDeleteTeamId(team._id)}
             />
           ))}
         </div>
@@ -278,7 +317,6 @@ export default function TeamsPage() {
           </DialogHeader>
           <p className="text-sm text-gray-500">Select 2–8 ACO players to form a team.</p>
 
-          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -289,7 +327,6 @@ export default function TeamsPage() {
             />
           </div>
 
-          {/* Player List */}
           <div className="border border-gray-200 rounded-xl overflow-hidden">
             <div className="max-h-64 overflow-y-auto divide-y divide-gray-50">
               {filtered.length === 0 ? (
@@ -344,6 +381,23 @@ export default function TeamsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Team Confirmation */}
+      <ConfirmDialog
+        open={deleteTeamId !== null}
+        onOpenChange={(open) => !open && setDeleteTeamId(null)}
+        title="Delete Team"
+        description="This team will be permanently deleted and all members will be released back to the available pool. Hotel slot assignments will also be removed."
+        confirmLabel="Delete Team"
+        onConfirm={() => {
+          if (!deleteTeamId) return;
+          deleteTeam.mutate(deleteTeamId, {
+            onSuccess: () => { toast.success("Team deleted"); setDeleteTeamId(null); },
+            onError: () => { toast.error("Failed to delete team"); setDeleteTeamId(null); },
+          });
+        }}
+        loading={deleteTeam.isPending}
+      />
     </div>
   );
 }

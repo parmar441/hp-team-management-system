@@ -3,6 +3,9 @@ import { usePeople, useCreatePerson, useUpdatePerson, useDeletePerson, useToggle
 import { useDynamicZoneNames } from "../hooks/useDynamicZones";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { ConfirmDialog } from "../components/ui/confirm-dialog";
+import { useToast } from "../components/ui/toaster";
+import { useDebounce } from "../hooks/useDebounce";
 import { Users, Plus, Upload, Download, Trash2, Edit2, Search, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 
 const EMPTY_PERSON: Partial<Person> = {
@@ -34,7 +37,7 @@ function PersonForm({ initial, onSave, onCancel, loading }: {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="First Name *">
           <input className={inputCls} value={form.firstName || ""} onChange={f("firstName")} placeholder="First name" required />
         </Field>
@@ -60,7 +63,14 @@ function PersonForm({ initial, onSave, onCancel, loading }: {
           </Select>
         </Field>
         <Field label="Age Range">
-          <input className={inputCls} value={form.ageRange || ""} onChange={f("ageRange")} placeholder="15-45" />
+          <Select value={form.ageRange} onValueChange={(v) => setForm((p) => ({ ...p, ageRange: v }))}>
+            <SelectTrigger className={selectTriggerCls}><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {["0-6", "7-14", "15-45", "46-65", "65+"].map((r) => (
+                <SelectItem key={r} value={r}>{r}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
         <Field label="Mandal / State">
           <input className={inputCls} value={form.mandal || ""} onChange={f("mandal")} placeholder="New Jersey" />
@@ -77,12 +87,12 @@ function PersonForm({ initial, onSave, onCancel, loading }: {
         <Field label="Family ID">
           <input className={inputCls} value={form.familyId || ""} onChange={f("familyId")} placeholder="Optional" />
         </Field>
-        <div className="col-span-2">
+        <div className="sm:col-span-2">
           <Field label="Category">
             <input className={inputCls} value={form.category || ""} onChange={f("category")} placeholder="Category" />
           </Field>
         </div>
-        <div className="col-span-2">
+        <div className="sm:col-span-2">
           <Field label="Note">
             <textarea className={`${inputCls} resize-none`} rows={2} value={form.note || ""} onChange={f("note")} placeholder="Any notes..." />
           </Field>
@@ -113,6 +123,7 @@ function AcoBadge({ value, onClick }: { value: string; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
+      title="Click to toggle ACO status"
       className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all hover:opacity-80 ${
         value === "Yes"
           ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
@@ -125,6 +136,7 @@ function AcoBadge({ value, onClick }: { value: string; onClick: () => void }) {
 }
 
 export default function PeoplePage() {
+  const toast = useToast();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [zoneFilter, setZoneFilter] = useState("");
@@ -132,9 +144,12 @@ export default function PeoplePage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showForm, setShowForm] = useState(false);
   const [editPerson, setEditPerson] = useState<Person | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const csvRef = useRef<HTMLInputElement>(null);
 
-  const filters = { search, zone: zoneFilter, acoNeeded: acoFilter, page, pageSize: 50 };
+  const debouncedSearch = useDebounce(search, 350);
+  const filters = { search: debouncedSearch, zone: zoneFilter, acoNeeded: acoFilter, page, pageSize: 50 };
   const { data, isLoading } = usePeople(filters);
   const { data: zoneNames } = useDynamicZoneNames();
 
@@ -164,6 +179,7 @@ export default function PeoplePage() {
     a.href = URL.createObjectURL(new Blob([[headers.join(","), ...rows].join("\n")], { type: "text/csv" }));
     a.download = "people.csv";
     a.click();
+    toast.success("CSV exported successfully");
   }
 
   async function handleCSVImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -176,7 +192,12 @@ export default function PeoplePage() {
       const vals = line.split(",");
       return Object.fromEntries(headers.map((h, i) => [h, vals[i]?.trim() || ""]));
     });
-    await bulkImport.mutateAsync(rows as any);
+    try {
+      await bulkImport.mutateAsync(rows as any);
+      toast.success(`${rows.length} people imported successfully`);
+    } catch {
+      toast.error("Import failed. Check your CSV format.");
+    }
     e.target.value = "";
   }
 
@@ -185,7 +206,7 @@ export default function PeoplePage() {
   return (
     <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center">
@@ -195,7 +216,7 @@ export default function PeoplePage() {
           </h1>
           <p className="text-gray-500 text-sm mt-1">{total} registered members</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 justify-end">
           <button
             onClick={exportCSV}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
@@ -204,9 +225,10 @@ export default function PeoplePage() {
           </button>
           <button
             onClick={() => csvRef.current?.click()}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
+            disabled={bulkImport.isPending}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60"
           >
-            <Upload className="w-4 h-4" /> Import
+            <Upload className="w-4 h-4" /> {bulkImport.isPending ? "Importing..." : "Import"}
           </button>
           <input ref={csvRef} type="file" accept=".csv" className="hidden" onChange={handleCSVImport} />
           <button
@@ -259,7 +281,7 @@ export default function PeoplePage() {
         )}
         {selected.size > 0 && (
           <button
-            onClick={() => { bulkDelete.mutate([...selected]); setSelected(new Set()); }}
+            onClick={() => setShowBulkDeleteConfirm(true)}
             className="ml-auto flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100 transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" /> Delete {selected.size} selected
@@ -309,7 +331,7 @@ export default function PeoplePage() {
                       <Users className="w-6 h-6 text-gray-400" />
                     </div>
                     <p className="text-gray-500 font-medium">No people found</p>
-                    <p className="text-gray-400 text-xs mt-1">{hasFilters ? "Try adjusting your filters" : "Add someone to get started"}</p>
+                    <p className="text-gray-400 text-xs mt-1">{hasFilters ? "Try adjusting your filters" : "Click \"Add Person\" to get started"}</p>
                   </td>
                 </tr>
               ) : (
@@ -351,7 +373,10 @@ export default function PeoplePage() {
                     <td className="p-4">
                       <AcoBadge
                         value={p.acoNeeded}
-                        onClick={() => toggleAco.mutate({ id: p._id, acoNeeded: p.acoNeeded === "Yes" ? "No" : "Yes" })}
+                        onClick={() => toggleAco.mutate({ id: p._id, acoNeeded: p.acoNeeded === "Yes" ? "No" : "Yes" }, {
+                          onSuccess: () => toast.success(`ACO status updated`),
+                          onError: () => toast.error("Failed to update ACO status"),
+                        })}
                       />
                     </td>
                     <td className="p-4 text-gray-500 text-xs">{p.mandal || "—"}</td>
@@ -360,14 +385,14 @@ export default function PeoplePage() {
                         <button
                           onClick={() => { setEditPerson(p); setShowForm(true); }}
                           className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                          title="Edit"
+                          title="Edit person"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => deletePerson.mutate(p._id)}
+                          onClick={() => setDeleteTarget(p._id)}
                           className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                          title="Delete"
+                          title="Delete person"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -418,16 +443,62 @@ export default function PeoplePage() {
             loading={createPerson.isPending || updatePerson.isPending}
             onCancel={() => setShowForm(false)}
             onSave={async (data) => {
-              if (editPerson) {
-                await updatePerson.mutateAsync({ id: editPerson._id, data });
-              } else {
-                await createPerson.mutateAsync(data);
+              try {
+                if (editPerson) {
+                  await updatePerson.mutateAsync({ id: editPerson._id, data });
+                  toast.success("Person updated successfully");
+                } else {
+                  await createPerson.mutateAsync(data);
+                  toast.success("Person added successfully");
+                }
+                setShowForm(false);
+              } catch {
+                toast.error(editPerson ? "Failed to update person" : "Failed to add person");
               }
-              setShowForm(false);
             }}
           />
         </DialogContent>
       </Dialog>
+
+      {/* Single Delete Confirmation */}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Person"
+        description="This person will be permanently removed from the system, including any team memberships. This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          deletePerson.mutate(deleteTarget, {
+            onSuccess: () => { toast.success("Person deleted"); setDeleteTarget(null); },
+            onError: () => { toast.error("Failed to delete person"); setDeleteTarget(null); },
+          });
+        }}
+        loading={deletePerson.isPending}
+      />
+
+      {/* Bulk Delete Confirmation */}
+      <ConfirmDialog
+        open={showBulkDeleteConfirm}
+        onOpenChange={setShowBulkDeleteConfirm}
+        title={`Delete ${selected.size} People`}
+        description={`You are about to permanently delete ${selected.size} people. This action cannot be undone.`}
+        confirmLabel={`Delete ${selected.size} People`}
+        onConfirm={() => {
+          bulkDelete.mutate([...selected], {
+            onSuccess: () => {
+              toast.success(`${selected.size} people deleted`);
+              setSelected(new Set());
+              setShowBulkDeleteConfirm(false);
+            },
+            onError: () => {
+              toast.error("Failed to delete selected people");
+              setShowBulkDeleteConfirm(false);
+            },
+          });
+        }}
+        loading={bulkDelete.isPending}
+      />
     </div>
   );
 }
