@@ -148,10 +148,10 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       <div className="flex items-center justify-between px-5 h-16 border-b border-white/[0.06] flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-            <UsersRound className="w-4.5 h-4.5 text-white" />
+            <Hotel className="w-4 h-4 text-white" />
           </div>
           <div className="leading-tight">
-            <p className="text-white font-semibold text-[13px]">HP Team Manager</p>
+            <p className="text-white font-semibold text-[13px]">Accommodation</p>
             <p className="text-slate-500 text-[11px]">Management System</p>
           </div>
         </div>
@@ -256,9 +256,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center">
-              <UsersRound className="w-3.5 h-3.5 text-white" />
+              <Hotel className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="font-semibold text-gray-900 text-sm">HP Team Manager</span>
+            <span className="font-semibold text-gray-900 text-sm">Accommodation</span>
           </div>
         </header>
 

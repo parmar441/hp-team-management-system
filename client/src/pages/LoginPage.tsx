@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLogin } from "../hooks/useAuth";
-import { Eye, EyeOff, ArrowRight, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, AlertCircle, BedDouble } from "lucide-react";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -50,10 +50,10 @@ export default function LoginPage() {
           <div className="relative mb-4">
             <div className="absolute inset-0 rounded-3xl bg-indigo-500/40 blur-xl scale-110" />
             <div className="relative w-[68px] h-[68px] rounded-3xl bg-gradient-to-br from-indigo-400 via-indigo-600 to-violet-700 flex items-center justify-center shadow-2xl shadow-indigo-900">
-              <span className="text-white font-black text-2xl tracking-tight">HP</span>
+              <BedDouble className="w-8 h-8 text-white" />
             </div>
           </div>
-          <h1 className="text-white font-bold text-xl tracking-tight">HP Team Manager</h1>
+          <h1 className="text-white font-bold text-xl tracking-tight">Accommodation</h1>
           <p className="text-slate-500 text-sm mt-1">Management System</p>
         </div>
 
