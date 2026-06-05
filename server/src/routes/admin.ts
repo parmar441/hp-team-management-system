@@ -15,9 +15,43 @@ const router = Router();
 router.get("/users", requireAdmin, async (_req: Request, res: Response): Promise<void> => {
   try {
     const users = await User.find().sort({ name: 1 });
-    res.json(users);
+    const credentials = await LeadCredential.find({}, { userId: 1, username: 1 });
+    const credMap = new Map(credentials.map((c) => [c.userId.toString(), { credentialId: c._id, credentialUsername: c.username }]));
+    const usersWithCreds = users.map((u) => ({
+      ...u.toJSON(),
+      credentialId: credMap.get(u._id.toString())?.credentialId ?? null,
+      credentialUsername: credMap.get(u._id.toString())?.credentialUsername ?? null,
+    }));
+    res.json(usersWithCreds);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/users — create a new user with login credentials
+router.post("/users", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name, email, role, username, password } = req.body;
+    if (!name || !role || !username || !password) {
+      res.status(400).json({ error: "Name, role, username, and password are required" });
+      return;
+    }
+    if (password.length < 8) {
+      res.status(400).json({ error: "Password must be at least 8 characters" });
+      return;
+    }
+    const existing = await LeadCredential.findOne({ username });
+    if (existing) {
+      res.status(400).json({ error: "Username already taken" });
+      return;
+    }
+    const openId = `local_${username}_${Date.now()}`;
+    const passwordHash = await bcrypt.hash(password, 12);
+    const user = await User.create({ openId, name: name.trim(), email: email?.trim() || undefined, role, loginMethod: "credential" });
+    const credential = await LeadCredential.create({ userId: user._id, username, passwordHash, createdBy: req.user!.id });
+    res.status(201).json({ ...user.toJSON(), credentialId: credential._id, credentialUsername: credential.username });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
   }
 });
 
@@ -28,6 +62,46 @@ router.patch("/users/:id/role", requireAdmin, async (req: Request, res: Response
     const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true });
     if (!user) { res.status(404).json({ error: "User not found" }); return; }
     res.json(user);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// PATCH /api/admin/users/:id/reset-password — reset password for any credentialed user
+router.patch("/users/:id/reset-password", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { password } = req.body;
+    if (!password || password.length < 8) {
+      res.status(400).json({ error: "Password must be at least 8 characters" });
+      return;
+    }
+    const passwordHash = await bcrypt.hash(password, 12);
+    const credential = await LeadCredential.findOneAndUpdate(
+      { userId: req.params.id },
+      { passwordHash },
+      { new: true }
+    );
+    if (!credential) {
+      res.status(404).json({ error: "No credentials found for this user" });
+      return;
+    }
+    res.json({ success: true, username: credential.username });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// DELETE /api/admin/users/:id — delete user and all associated data
+router.delete("/users/:id", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) { res.status(404).json({ error: "User not found" }); return; }
+    await ZoneAssignment.deleteMany({ userId: req.params.id });
+    await AreaAssignment.deleteMany({ userId: req.params.id });
+    await LeadCredential.deleteMany({ userId: req.params.id });
+    await HotelPersonAssignment.deleteMany({ userId: req.params.id });
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }

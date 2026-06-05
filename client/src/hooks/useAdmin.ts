@@ -17,6 +17,32 @@ export function useUpdateUserRole() {
   });
 }
 
+export function useCreateUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { name: string; email?: string; role: string; username: string; password: string }) =>
+      api.post("/admin/users", data).then((r) => r.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "users"] }),
+  });
+}
+
+export function useResetUserPassword() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, password }: { id: string; password: string }) =>
+      api.patch(`/admin/users/${id}/reset-password`, { password }).then((r) => r.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "users"] }),
+  });
+}
+
+export function useDeleteUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/admin/users/${id}`).then((r) => r.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "users"] }),
+  });
+}
+
 export function useZoneAssignments() {
   return useQuery({
     queryKey: ["admin", "zone-assignments"],

@@ -1,214 +1,147 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useLogin, useLocalLogin } from "../hooks/useAuth";
-import { UsersRound, Eye, EyeOff, ArrowRight, Shield, Users, BarChart3 } from "lucide-react";
+import { useLogin } from "../hooks/useAuth";
+import { Eye, EyeOff, ArrowRight, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const loginMutation = useLogin();
-  const localLoginMutation = useLocalLogin();
 
-  const [tab, setTab] = useState<"local" | "credentials">("local");
-  const [form, setForm] = useState({ username: "", password: "", name: "", email: "" });
-  const [error, setError] = useState("");
+  const [form, setForm] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
 
-  const loading = loginMutation.isPending || localLoginMutation.isPending;
+  const loading = loginMutation.isPending;
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
     setError("");
     try {
-      if (tab === "credentials") {
-        await loginMutation.mutateAsync({ username: form.username, password: form.password });
-      } else {
-        await localLoginMutation.mutateAsync({ name: form.name, email: form.email });
-      }
+      await loginMutation.mutateAsync({ username: form.username, password: form.password });
       navigate("/");
     } catch (err: any) {
-      setError(err?.response?.data?.error || "Login failed. Please check your details.");
+      setError(err?.response?.data?.error || "Invalid username or password.");
     }
   }
 
-  const inputCls = "w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 placeholder-gray-400 transition-all text-sm";
-
   return (
-    <div className="min-h-screen flex bg-[#0f172a]">
-      {/* Left Panel - Branding */}
-      <div className="hidden lg:flex flex-col justify-between w-[45%] p-12">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
-            <UsersRound className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <p className="font-semibold text-white text-base">HP Team Manager</p>
-            <p className="text-slate-500 text-xs">Management System</p>
-          </div>
-        </div>
-
-        <div className="space-y-10">
-          <div>
-            <h1 className="text-4xl font-extrabold leading-[1.15] mb-4 text-white">
-              Manage your team<br />with confidence
-            </h1>
-            <p className="text-slate-400 text-lg leading-relaxed max-w-md">
-              Streamline group assignments, track registrations, and organize tournaments all in one place.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            {[
-              { icon: <Users className="w-5 h-5" />, title: "People Management", desc: "Track 100+ members across zones and areas" },
-              { icon: <Shield className="w-5 h-5" />, title: "Role-Based Access", desc: "Admin, zone leads, area leads, and team leads" },
-              { icon: <BarChart3 className="w-5 h-5" />, title: "Live Dashboard", desc: "Real-time stats, zone breakdowns, and more" },
-            ].map((f) => (
-              <div key={f.title} className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center flex-shrink-0 border border-white/[0.08] text-slate-400">
-                  {f.icon}
-                </div>
-                <div>
-                  <p className="font-medium text-white text-sm">{f.title}</p>
-                  <p className="text-slate-500 text-sm">{f.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <p className="text-slate-600 text-xs">© 2026 HP Team Management System</p>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#080c18]">
+      {/* Animated gradient mesh */}
+      <div className="absolute inset-0">
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-700/25 blur-[120px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-violet-700/20 blur-[100px]" />
+        <div className="absolute top-[40%] left-[60%] w-[300px] h-[300px] rounded-full bg-blue-600/10 blur-[80px]" />
       </div>
 
-      {/* Right Panel - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-12 bg-gray-50 lg:rounded-l-[2rem]">
-        <div className="w-full max-w-[420px]">
-          {/* Mobile Logo */}
-          <div className="flex lg:hidden items-center justify-center gap-3 mb-10">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
-              <UsersRound className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <p className="font-semibold text-gray-900 text-lg">HP Team Manager</p>
-              <p className="text-gray-500 text-sm">Management System</p>
+      {/* Subtle dot grid */}
+      <div
+        className="absolute inset-0 opacity-[0.18]"
+        style={{
+          backgroundImage: "radial-gradient(circle, #4f46e5 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
+        }}
+      />
+
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-[400px] px-5 py-12 flex flex-col items-center">
+
+        {/* Brand mark */}
+        <div className="flex flex-col items-center mb-10">
+          <div className="relative mb-4">
+            <div className="absolute inset-0 rounded-3xl bg-indigo-500/40 blur-xl scale-110" />
+            <div className="relative w-[68px] h-[68px] rounded-3xl bg-gradient-to-br from-indigo-400 via-indigo-600 to-violet-700 flex items-center justify-center shadow-2xl shadow-indigo-900">
+              <span className="text-white font-black text-2xl tracking-tight">HP</span>
             </div>
           </div>
+          <h1 className="text-white font-bold text-xl tracking-tight">HP Team Manager</h1>
+          <p className="text-slate-500 text-sm mt-1">Management System</p>
+        </div>
 
-          <div className="bg-white rounded-2xl shadow-elevated border border-gray-100 overflow-hidden">
-            {/* Header */}
-            <div className="px-8 pt-8 pb-5">
-              <h2 className="text-xl font-bold text-gray-900">Welcome back</h2>
-              <p className="text-gray-500 text-sm mt-1">Sign in to access your dashboard</p>
-            </div>
+        {/* Card */}
+        <div className="w-full bg-white/[0.04] backdrop-blur-2xl rounded-3xl border border-white/[0.10] shadow-2xl shadow-black/50 overflow-hidden">
+          {/* Top accent bar */}
+          <div className="h-[3px] w-full bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500" />
 
-            {/* Tab Toggle */}
-            <div className="px-8 pb-3">
-              <div className="flex rounded-xl bg-gray-100 p-1 gap-1">
-                {[
-                  { key: "local", label: "Quick Sign In" },
-                  { key: "credentials", label: "Lead Login" },
-                ].map((t) => (
-                  <button
-                    key={t.key}
-                    onClick={() => { setTab(t.key as any); setError(""); }}
-                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      tab === t.key
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-500 hover:text-gray-700"
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
+          <div className="px-8 pt-8 pb-9">
+            <h2 className="text-[1.6rem] font-bold text-white mb-1">Sign in</h2>
+            <p className="text-slate-400 text-sm mb-8">Enter your credentials to continue</p>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Username */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  value={form.username}
+                  onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
+                  placeholder="Enter username"
+                  required
+                  autoComplete="username"
+                  className="w-full px-4 py-3.5 rounded-xl bg-white/[0.07] border border-white/[0.10] text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500/40 focus:bg-white/[0.10] transition-all"
+                />
               </div>
-            </div>
 
-            <form onSubmit={handleSubmit} className="px-8 pb-8 pt-3 space-y-4">
-              {tab === "local" ? (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
-                    <input
-                      type="text"
-                      value={form.name}
-                      onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                      placeholder="e.g. Raj Patel"
-                      required
-                      className={inputCls}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
-                    <input
-                      type="email"
-                      value={form.email}
-                      onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                      placeholder="you@example.com"
-                      required
-                      className={inputCls}
-                    />
-                  </div>
-                  <div className="bg-indigo-50 rounded-xl px-4 py-3">
-                    <p className="text-xs text-indigo-700 font-medium">First user to sign in gets admin access automatically.</p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Username</label>
-                    <input
-                      type="text"
-                      value={form.username}
-                      onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
-                      placeholder="Your username"
-                      required
-                      className={inputCls}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={form.password}
-                        onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                        placeholder="Your password"
-                        required
-                        className={`${inputCls} pr-12`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                      >
-                        {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
+              {/* Password */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                    placeholder="Enter password"
+                    required
+                    autoComplete="current-password"
+                    className="w-full px-4 py-3.5 pr-12 rounded-xl bg-white/[0.07] border border-white/[0.10] text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500/40 focus:bg-white/[0.10] transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    tabIndex={-1}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
 
+              {/* Error */}
               {error && (
-                <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3">
-                  <p className="text-sm text-red-600">{error}</p>
+                <div className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                  <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                  <p className="text-sm text-red-300">{error}</p>
                 </div>
               )}
 
+              {/* Submit */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm transition-all duration-200 shadow-sm mt-2"
+                className="w-full relative flex items-center justify-center gap-2.5 py-3.5 rounded-xl font-semibold text-sm text-white overflow-hidden group disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200 mt-2"
+                style={{ background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)" }}
               >
+                {/* hover shine */}
+                <span className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-200 rounded-xl" />
                 {loading ? (
                   <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                 ) : (
                   <>
-                    Sign In
-                    <ArrowRight className="w-4 h-4" />
+                    <span className="relative">Sign In</span>
+                    <ArrowRight className="w-4 h-4 relative group-hover:translate-x-0.5 transition-transform" />
                   </>
                 )}
               </button>
             </form>
           </div>
         </div>
+
+        <p className="text-slate-600 text-xs mt-7 text-center">
+          Contact your administrator if you need access
+        </p>
       </div>
     </div>
   );

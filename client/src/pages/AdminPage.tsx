@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  useAdminUsers, useUpdateUserRole,
+  useAdminUsers, useUpdateUserRole, useCreateUser, useResetUserPassword, useDeleteUser,
   useZoneAssignments, useCreateZoneAssignment, useDeleteZoneAssignment,
   useAreaAssignments, useCreateAreaAssignment, useDeleteAreaAssignment,
   useAuditLog, useCreateCredential,
@@ -15,6 +15,7 @@ import { useToast } from "../components/ui/toaster";
 import {
   Settings, Users, MapPin, ClipboardList, KeyRound, Trash2,
   ChevronLeft, ChevronRight, Hotel, RefreshCw, CheckCircle2, AlertCircle,
+  UserPlus, Eye, EyeOff, X,
 } from "lucide-react";
 
 type AdminTab = "users" | "zones" | "areas" | "audit" | "credentials" | "hotel-persons";
@@ -73,28 +74,184 @@ export default function AdminPage() {
   );
 }
 
+const ROLES = ["user", "admin", "zone_lead", "area_lead", "hotel_person"] as const;
+
 function UsersTab() {
   const toast = useToast();
   const { data: users, isLoading } = useAdminUsers();
   const updateRole = useUpdateUserRole();
+  const createUser = useCreateUser();
+  const resetPassword = useResetUserPassword();
+
+  const deleteUser = useDeleteUser();
+
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: "", email: "", role: "user", username: "", password: "" });
+  const [showCreatePw, setShowCreatePw] = useState(false);
+
+  const [resetId, setResetId] = useState<string | null>(null);
+  const [resetPw, setResetPw] = useState("");
+  const [showResetPw, setShowResetPw] = useState(false);
+
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  async function handleCreate(e: React.SyntheticEvent) {
+    e.preventDefault();
+    try {
+      const payload = { ...createForm, email: createForm.email || undefined };
+      await createUser.mutateAsync(payload);
+      toast.success(`User "${createForm.name}" created with username "${createForm.username}"`);
+      setCreateForm({ name: "", email: "", role: "user", username: "", password: "" });
+      setShowCreate(false);
+      setShowCreatePw(false);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to create user");
+    }
+  }
+
+  async function handleResetPassword(userId: string) {
+    if (resetPw.length < 8) { toast.error("Password must be at least 8 characters"); return; }
+    try {
+      await resetPassword.mutateAsync({ id: userId, password: resetPw });
+      toast.success("Password reset successfully");
+      setResetId(null);
+      setResetPw("");
+      setShowResetPw(false);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to reset password");
+    }
+  }
+
+  const inputCls = "w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent";
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div className="space-y-0 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900">All Users</h3>
+          <p className="text-xs text-gray-400 mt-0.5">{(users ?? []).length} total</p>
+        </div>
+        <button
+          onClick={() => { setShowCreate((v) => !v); setShowCreatePw(false); }}
+          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-4 py-2 text-sm font-semibold transition-colors"
+        >
+          <UserPlus className="w-4 h-4" />
+          Create User
+        </button>
+      </div>
+
+      {/* Create User Form */}
+      {showCreate && (
+        <div className="border-b border-gray-100 bg-indigo-50/40 px-5 py-5">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-sm font-semibold text-gray-900">New User Details</h4>
+            <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-600">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <form onSubmit={handleCreate} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-gray-700">Name *</label>
+              <input
+                value={createForm.name}
+                onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+                required
+                placeholder="Full name"
+                className={inputCls}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-gray-700">Email</label>
+              <input
+                type="email"
+                value={createForm.email}
+                onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="Optional"
+                className={inputCls}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-gray-700">Role *</label>
+              <Select value={createForm.role} onValueChange={(v) => setCreateForm((f) => ({ ...f, role: v }))}>
+                <SelectTrigger className="w-full rounded-xl border-gray-200 text-sm h-[42px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLES.map((r) => (
+                    <SelectItem key={r} value={r}>{r.replace(/_/g, " ")}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-gray-700">Username *</label>
+              <input
+                value={createForm.username}
+                onChange={(e) => setCreateForm((f) => ({ ...f, username: e.target.value }))}
+                required
+                placeholder="Login username"
+                className={inputCls}
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-1 lg:col-span-1">
+              <label className="block text-xs font-medium text-gray-700">Password *</label>
+              <div className="relative">
+                <input
+                  type={showCreatePw ? "text" : "password"}
+                  value={createForm.password}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
+                  required
+                  minLength={8}
+                  placeholder="Min 8 characters"
+                  className="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCreatePw((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showCreatePw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="sm:col-span-2 lg:col-span-3 flex gap-3 pt-1">
+              <button
+                type="submit"
+                disabled={createUser.isPending}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-5 py-2.5 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {createUser.isPending ? "Creating..." : "Create User"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowCreate(false); setShowCreatePw(false); }}
+                className="border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl px-5 py-2.5 text-sm font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Users Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50/80 border-b border-gray-100">
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Name / Email</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">OpenID</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Username</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Role</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Last Sign In</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {isLoading
               ? Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
-                    {Array.from({ length: 4 }).map((_, j) => (
+                    {Array.from({ length: 5 }).map((_, j) => (
                       <td key={j} className="px-4 py-3">
                         <div className="h-4 w-full bg-gray-100 rounded-lg animate-pulse" />
                       </td>
@@ -103,47 +260,137 @@ function UsersTab() {
                 ))
               : (users ?? []).length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-12 text-center text-sm text-gray-400">No users found</td>
+                  <td colSpan={5} className="px-4 py-12 text-center text-sm text-gray-400">No users found</td>
                 </tr>
               ) : (users ?? []).map((u: any) => (
-                <tr key={u._id} className="hover:bg-indigo-50/30 transition-colors">
-                  <td className="px-4 py-3 font-medium text-gray-900">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-600 flex-shrink-0">
-                        {(u.name || u.email || u.openId || "?")[0].toUpperCase()}
+                <>
+                  <tr key={u._id} className="hover:bg-indigo-50/30 transition-colors">
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-600 flex-shrink-0">
+                          {(u.name || u.email || u.openId || "?")[0].toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="truncate">{u.name || u.openId}</div>
+                          {u.email && <div className="text-xs text-gray-400 truncate">{u.email}</div>}
+                        </div>
                       </div>
-                      <span className="truncate">{u.name || u.email || u.openId}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs font-mono truncate max-w-[160px]">{u.openId}</td>
-                  <td className="px-4 py-3">
-                    <Select
-                      value={u.role}
-                      onValueChange={(role) =>
-                        updateRole.mutate({ id: u._id, role }, {
-                          onSuccess: () => toast.success(`Role updated to "${role.replace("_", " ")}"`),
-                          onError: () => toast.error("Failed to update role"),
-                        })
-                      }
-                    >
-                      <SelectTrigger className="h-8 w-36 text-xs rounded-lg border-gray-200">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {["user", "admin", "zone_lead", "area_lead", "hotel_person"].map((r) => (
-                          <SelectItem key={r} value={r}>{r.replace("_", " ")}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">
-                    {u.lastSignedIn ? new Date(u.lastSignedIn).toLocaleDateString() : "—"}
-                  </td>
-                </tr>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 text-xs font-mono">
+                      {u.credentialUsername || <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Select
+                        value={u.role}
+                        onValueChange={(role) =>
+                          updateRole.mutate({ id: u._id, role }, {
+                            onSuccess: () => toast.success(`Role updated to "${role.replace(/_/g, " ")}"`),
+                            onError: () => toast.error("Failed to update role"),
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-8 w-36 text-xs rounded-lg border-gray-200">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ROLES.map((r) => (
+                            <SelectItem key={r} value={r}>{r.replace(/_/g, " ")}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-4 py-3 text-gray-400 text-xs">
+                      {u.lastSignedIn ? new Date(u.lastSignedIn).toLocaleDateString() : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {u.credentialId && (
+                          <button
+                            onClick={() => {
+                              if (resetId === u._id) { setResetId(null); setResetPw(""); setShowResetPw(false); }
+                              else { setResetId(u._id); setResetPw(""); setShowResetPw(false); }
+                            }}
+                            title="Reset password"
+                            className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
+                              resetId === u._id
+                                ? "bg-amber-100 text-amber-600"
+                                : "hover:bg-amber-50 text-gray-400 hover:text-amber-600"
+                            }`}
+                          >
+                            <KeyRound className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setDeleteId(u._id)}
+                          title="Delete user"
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {resetId === u._id && (
+                    <tr key={`${u._id}-reset`} className="bg-amber-50/40">
+                      <td colSpan={5} className="px-4 py-3">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="text-xs font-medium text-amber-700">Reset password for <strong>{u.credentialUsername}</strong>:</span>
+                          <div className="relative">
+                            <input
+                              type={showResetPw ? "text" : "password"}
+                              value={resetPw}
+                              onChange={(e) => setResetPw(e.target.value)}
+                              placeholder="New password (min 8)"
+                              className="pl-3 pr-9 py-1.5 rounded-lg border border-amber-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent w-52"
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowResetPw((v) => !v)}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            >
+                              {showResetPw ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                          <button
+                            onClick={() => handleResetPassword(u._id)}
+                            disabled={resetPassword.isPending}
+                            className="bg-amber-500 hover:bg-amber-600 text-white rounded-lg px-3.5 py-1.5 text-xs font-semibold disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            {resetPassword.isPending ? "Saving..." : "Save Password"}
+                          </button>
+                          <button
+                            onClick={() => { setResetId(null); setResetPw(""); setShowResetPw(false); }}
+                            className="text-xs text-gray-400 hover:text-gray-600 px-1"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
               ))}
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        open={deleteId !== null}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title="Delete User"
+        description="This will permanently delete this user along with their credentials, zone assignments, and area assignments. This action cannot be undone."
+        confirmLabel="Delete User"
+        onConfirm={() => {
+          if (!deleteId) return;
+          deleteUser.mutate(deleteId, {
+            onSuccess: () => { toast.success("User deleted"); setDeleteId(null); setResetId(null); },
+            onError: () => { toast.error("Failed to delete user"); setDeleteId(null); },
+          });
+        }}
+        loading={deleteUser.isPending}
+      />
     </div>
   );
 }
