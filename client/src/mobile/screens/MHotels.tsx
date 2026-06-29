@@ -4,7 +4,7 @@ import { Plus, Hotel, Trash2 } from "lucide-react";
 import { useTournaments, useCreateTournament, useDeleteTournament, type Tournament } from "../../hooks/useTournaments";
 import { useAssignments } from "../../hooks/useAssignments";
 import { useMe } from "../../hooks/useAuth";
-import { ScreenHeader, IconButton, Pill, Sheet, Label, TextInput, ChipGroup, PrimaryButton, EmptyState, Spinner, useToast } from "../ui";
+import { ScreenHeader, IconButton, Pill, Sheet, Label, TextInput, ChipGroup, PrimaryButton, EmptyState, CardSkeletons, useToast } from "../ui";
 
 const STATUS: Record<Tournament["status"], { tone: "emerald" | "amber" | "rose"; label: string }> = {
   available: { tone: "emerald", label: "Available" },
@@ -48,19 +48,23 @@ export default function MHotels() {
       <ScreenHeader title="Hotels" subtitle={`${list.length} venues`}
         action={isAdmin && <IconButton onClick={() => setOpen(true)} aria-label="Add hotel"><Plus className="w-5 h-5" /></IconButton>} />
 
-      {isLoading ? <div className="flex justify-center pt-16"><Spinner className="w-6 h-6" /></div>
+      {isLoading ? <CardSkeletons count={4} height={116} />
         : list.length === 0 ? <EmptyState icon={<Hotel className="w-6 h-6" />} title="No hotels yet" hint={isAdmin ? "Tap + to add a venue" : undefined} />
         : (
-          <div className="space-y-[11px]">
+          <div className="space-y-[11px] m-stagger">
             {list.map((h) => {
               const occ = occupied.get(h._id) ?? 0;
               const pct = h.totalSlots > 0 ? (occ / h.totalSlots) * 100 : 0;
               const st = STATUS[h.status];
               return (
                 <div key={h._id} onClick={() => navigate("/assignments")}
-                  className="rounded-[18px] border p-[15px] active:brightness-95 cursor-pointer"
-                  style={{ background: "var(--m-card)", borderColor: "var(--m-card-border)" }}>
-                  <div className="flex items-start gap-2">
+                  className="m-sheen m-press rounded-[18px] border p-[15px] cursor-pointer"
+                  style={{ backgroundColor: "var(--m-card)", borderColor: "var(--m-card-border)", boxShadow: "var(--m-shadow-card)" }}>
+                  <div className="flex items-start gap-3">
+                    <span className="w-10 h-10 rounded-[12px] flex items-center justify-center flex-shrink-0"
+                      style={{ background: "var(--m-accent-soft)", color: "var(--m-accent)" }}>
+                      <Hotel className="w-5 h-5" />
+                    </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[16.5px] font-bold truncate">{h.name}</p>
                       {h.address && <p className="text-[12.5px] text-[var(--m-muted)] truncate mt-0.5">{h.address}</p>}
@@ -73,10 +77,10 @@ export default function MHotels() {
                   </div>
                   <div className="flex items-center justify-between mt-3 mb-1.5">
                     <span className="text-[12.5px] font-medium text-[var(--m-muted)]">{occ} / {h.totalSlots} slots filled</span>
-                    <span className="text-[12px] text-[var(--m-faint)]">{Math.round(pct)}%</span>
+                    <span className="text-[12px] font-semibold text-[var(--m-faint)] tabular-nums">{Math.round(pct)}%</span>
                   </div>
                   <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--m-track)" }}>
-                    <div className="m-bar-fill h-full rounded-full" style={{ width: `${pct}%`, background: "var(--m-accent)" }} />
+                    <div className="m-bar-fill m-grad-accent h-full rounded-full" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );

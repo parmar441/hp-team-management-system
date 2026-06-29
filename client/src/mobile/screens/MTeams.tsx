@@ -5,7 +5,7 @@ import {
 } from "../../hooks/useTeams";
 import type { Person } from "../../hooks/usePeople";
 import { useMe } from "../../hooks/useAuth";
-import { Avatar, Pill, ScreenHeader, Sheet, EmptyState, Spinner, PrimaryButton, useToast } from "../ui";
+import { Avatar, Pill, ScreenHeader, Sheet, EmptyState, CardSkeletons, PrimaryButton, useToast } from "../ui";
 
 function nm(p: Person) { return `${p.firstName} ${p.lastName || ""}`.trim(); }
 
@@ -70,22 +70,24 @@ export default function MTeams() {
       <ScreenHeader title="Teams" subtitle={`${avail.length} ACO players available`}
         action={isAdmin && (
           <button onClick={() => setCreateOpen(true)}
-            className="inline-flex items-center gap-1.5 h-[40px] px-4 rounded-full text-[13px] font-bold active:scale-95"
-            style={{ background: "var(--m-accent)", color: "#fff" }}>
+            className="m-grad-accent m-glow m-press inline-flex items-center gap-1.5 h-[40px] px-4 rounded-full text-[13px] font-bold text-white">
             <Plus className="w-4 h-4" /> New
           </button>
         )} />
 
-      {isLoading ? <div className="flex justify-center pt-16"><Spinner className="w-6 h-6" /></div>
+      {isLoading ? <CardSkeletons count={4} height={132} />
         : list.length === 0 ? <EmptyState icon={<UsersRound className="w-6 h-6" />} title="No teams yet" hint={isAdmin ? "Tap New to form a team" : undefined} />
         : (
-          <div className="space-y-[11px]">
+          <div className="space-y-[11px] m-stagger">
             {list.map((t) => (
-              <div key={t._id} className="rounded-[18px] border p-[15px]" style={{ background: "var(--m-card)", borderColor: "var(--m-card-border)" }}>
-                <div className="flex items-center gap-2 mb-3">
+              <div key={t._id} className="m-sheen rounded-[18px] border p-[15px]" style={{ backgroundColor: "var(--m-card)", borderColor: "var(--m-card-border)", boxShadow: "var(--m-shadow-card)" }}>
+                <div className="flex items-center gap-2 mb-2.5">
                   <p className="m-serif text-[19px] font-bold flex-1 truncate">{t.name}</p>
                   {t.zone && <Pill tone="accent">{t.zone}</Pill>}
-                  <span className="text-[12px] text-[var(--m-faint)]">{t.members.length} / 8</span>
+                  <span className="text-[12px] font-semibold text-[var(--m-faint)] tabular-nums">{t.members.length} / 8</span>
+                </div>
+                <div className="h-1.5 rounded-full overflow-hidden mb-3" style={{ background: "var(--m-track)" }}>
+                  <div className="m-bar-fill m-grad-accent h-full rounded-full" style={{ width: `${(t.members.length / 8) * 100}%` }} />
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {t.members.map((m) => (

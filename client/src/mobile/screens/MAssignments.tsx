@@ -7,7 +7,7 @@ import {
 import { useAvailableRooms } from "../../hooks/useHotelRooms";
 import type { Team } from "../../hooks/useTeams";
 import { useMe } from "../../hooks/useAuth";
-import { ScreenHeader, Sheet, EmptyState, Spinner, PrimaryButton, TextInput, Label, useToast } from "../ui";
+import { ScreenHeader, Sheet, EmptyState, CardSkeletons, PrimaryButton, TextInput, Label, useToast } from "../ui";
 
 export default function MAssignments() {
   const toast = useToast();
@@ -44,16 +44,16 @@ export default function MAssignments() {
       )}
 
       {!hotelId ? <EmptyState icon={<ClipboardList className="w-6 h-6" />} title="No hotels" hint="Add a hotel first" />
-        : isLoading ? <div className="flex justify-center pt-12"><Spinner className="w-6 h-6" /></div>
+        : isLoading ? <CardSkeletons count={6} height={82} />
         : slots.length === 0 ? <EmptyState icon={<ClipboardList className="w-6 h-6" />} title="No slots" />
         : (
-          <div className="space-y-[11px]">
+          <div className="space-y-[11px] m-stagger">
             {slots.map((s) => {
               const team = s.teamId as Team | null;
               return (
                 <button key={s._id} onClick={() => isAdmin && setActive(s)}
-                  className="w-full text-left rounded-[18px] border p-[15px] flex items-center gap-3 active:brightness-95"
-                  style={{ background: "var(--m-card)", borderColor: "var(--m-card-border)" }}>
+                  className="m-sheen m-press w-full text-left rounded-[18px] border p-[15px] flex items-center gap-3"
+                  style={{ backgroundColor: "var(--m-card)", borderColor: "var(--m-card-border)", boxShadow: "var(--m-shadow-card)" }}>
                   <span className="w-10 h-10 rounded-[12px] flex items-center justify-center flex-shrink-0 font-bold text-[14px]"
                     style={team ? { background: "var(--m-aco-bg)", color: "var(--m-aco-fg)" } : { background: "var(--m-inset)", color: "var(--m-faint)" }}>
                     {s.slotNumber}
