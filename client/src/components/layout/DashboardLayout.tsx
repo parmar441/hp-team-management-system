@@ -6,6 +6,8 @@ import {
   MessageSquare, LogOut, Menu, X, ChevronRight, DoorOpen,
 } from "lucide-react";
 import { useMe, useLogout } from "../../hooks/useAuth";
+import { useIsMobile } from "../../hooks/useIsMobile";
+import MobileLayout from "../../mobile/MobileLayout";
 
 interface NavItem { label: string; to: string; icon: React.ReactNode }
 interface NavSection { label?: string; items: NavItem[] }
@@ -264,6 +266,11 @@ function MobileBottomNav({ onMoreClick }: { onMoreClick: () => void }) {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
+
+  // On phone/narrow viewports, render the dedicated dark mobile app instead of
+  // the desktop dashboard chrome. Desktop layout is left untouched.
+  if (isMobile) return <MobileLayout />;
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f1f4f9]">

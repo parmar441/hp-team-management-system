@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { ConfirmDialog } from "../components/ui/confirm-dialog";
 import { useToast } from "../components/ui/toaster";
+import { PageContainer, PageHeader } from "../components/ui/page";
 import { useDebounce } from "../hooks/useDebounce";
 import { Users, Plus, Upload, Download, Trash2, Edit2, Search, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 
@@ -112,11 +113,11 @@ function PersonForm({ initial, onSave, onCancel, loading }: {
 
 function AcoBadge({ value, onClick }: { value: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} title="Click to toggle ACO status"
+    <button onClick={onClick} title="Click to toggle Utaro status"
       className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all hover:opacity-80 ${
         value === "Yes" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
       }`}>
-      {value === "Yes" ? "ACO ✓" : "Non-ACO"}
+      {value === "Yes" ? "Yes" : "No"}
     </button>
   );
 }
@@ -189,41 +190,33 @@ export default function PeoplePage() {
   const hasFilters = search || zoneFilter || acoFilter;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
-
-      {/* Header — stacks title + actions in a single row on all sizes */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2.5">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
-              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
-            </div>
-            People
-          </h1>
-          <p className="text-gray-500 text-sm mt-0.5">{total} registered members</p>
-        </div>
-
-        {/* Action buttons — icon-only on mobile, icon+text on sm+ */}
-        <div className="flex gap-2 flex-shrink-0">
-          <button onClick={exportCSV} title="Export CSV"
-            className="flex items-center gap-2 px-2.5 sm:px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm">
-            <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Export</span>
-          </button>
-          <button onClick={() => csvRef.current?.click()} disabled={bulkImport.isPending} title="Import CSV"
-            className="flex items-center gap-2 px-2.5 sm:px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60">
-            <Upload className="w-4 h-4" />
-            <span className="hidden sm:inline">{bulkImport.isPending ? "Importing…" : "Import"}</span>
-          </button>
-          <input ref={csvRef} type="file" accept=".csv" className="hidden" onChange={handleCSVImport} />
-          <button onClick={() => { setEditPerson(null); setShowForm(true); }}
-            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors shadow-sm shadow-indigo-200">
-            <Plus className="w-4 h-4" />
-            <span className="hidden xs:inline sm:inline">Add</span>
-            <span className="hidden sm:inline">Person</span>
-          </button>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader
+        icon={<Users className="w-5 h-5" />}
+        title="People"
+        subtitle={`${total} registered members`}
+        actions={
+          <>
+            <button onClick={exportCSV} title="Export CSV"
+              className="flex items-center gap-2 px-2.5 sm:px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm">
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Export</span>
+            </button>
+            <button onClick={() => csvRef.current?.click()} disabled={bulkImport.isPending} title="Import CSV"
+              className="flex items-center gap-2 px-2.5 sm:px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60">
+              <Upload className="w-4 h-4" />
+              <span className="hidden sm:inline">{bulkImport.isPending ? "Importing…" : "Import"}</span>
+            </button>
+            <input ref={csvRef} type="file" accept=".csv" className="hidden" onChange={handleCSVImport} />
+            <button onClick={() => { setEditPerson(null); setShowForm(true); }}
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors shadow-sm shadow-indigo-200">
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Add Person</span>
+              <span className="sm:hidden">Add</span>
+            </button>
+          </>
+        }
+      />
 
       {/* Filters Bar */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 sm:p-4 space-y-2 sm:space-y-0 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
@@ -284,11 +277,10 @@ export default function PeoplePage() {
                 </th>
                 <th className="p-3 sm:p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
                 {/* Hidden on mobile */}
-                <th className="hidden sm:table-cell p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Gender</th>
-                <th className="hidden md:table-cell p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Age</th>
+                <th className="hidden sm:table-cell p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">City</th>
                 <th className="hidden md:table-cell p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Zone</th>
                 <th className="hidden lg:table-cell p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Area</th>
-                <th className="p-3 sm:p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">ACO</th>
+                <th className="p-3 sm:p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Utaro</th>
                 <th className="hidden lg:table-cell p-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Mandal</th>
                 <th className="p-3 sm:p-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
               </tr>
@@ -297,8 +289,8 @@ export default function PeoplePage() {
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i}>
-                    {[10, 140, 80, 60, 80, 80, 80, 80, 60].map((w, j) => (
-                      <td key={j} className={`p-3 sm:p-4 ${j >= 2 && j <= 4 ? "hidden sm:table-cell" : j >= 5 && j <= 7 ? "hidden md:table-cell" : ""}`}>
+                    {[10, 140, 80, 80, 80, 60, 80, 60].map((w, j) => (
+                      <td key={j} className={`p-3 sm:p-4 ${j === 2 ? "hidden sm:table-cell" : j === 3 ? "hidden md:table-cell" : j === 4 || j === 6 ? "hidden lg:table-cell" : ""}`}>
                         <div className="h-4 bg-gray-100 rounded-lg animate-pulse" style={{ width: `${w}px` }} />
                       </td>
                     ))}
@@ -306,7 +298,7 @@ export default function PeoplePage() {
                 ))
               ) : people.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-14 text-center">
+                  <td colSpan={8} className="py-14 text-center">
                     <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
                       <Users className="w-6 h-6 text-gray-400" />
                     </div>
@@ -328,7 +320,6 @@ export default function PeoplePage() {
                         </div>
                         <div className="min-w-0">
                           <p className="font-semibold text-gray-900 truncate">{p.fullName || `${p.firstName} ${p.lastName || ""}`.trim()}</p>
-                          {p.email && <p className="text-xs text-gray-400 truncate hidden sm:block">{p.email}</p>}
                           {/* Show zone/mandal inline on mobile where those columns are hidden */}
                           {(p.zone || p.mandal) && (
                             <p className="text-xs text-gray-400 mt-0.5 sm:hidden">
@@ -339,14 +330,7 @@ export default function PeoplePage() {
                       </div>
                     </td>
                     {/* Responsive columns */}
-                    <td className="hidden sm:table-cell p-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                        p.gender === "M" ? "bg-blue-50 text-blue-700" : "bg-pink-50 text-pink-700"
-                      }`}>
-                        {p.gender === "M" ? "Male" : "Female"}
-                      </span>
-                    </td>
-                    <td className="hidden md:table-cell p-4 text-gray-600 text-xs">{p.ageRange || "—"}</td>
+                    <td className="hidden sm:table-cell p-4 text-gray-600 text-xs">{p.city || "—"}</td>
                     <td className="hidden md:table-cell p-4">
                       {p.zone
                         ? <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700">{p.zone}</span>
@@ -460,6 +444,6 @@ export default function PeoplePage() {
         }}
         loading={bulkDelete.isPending}
       />
-    </div>
+    </PageContainer>
   );
 }

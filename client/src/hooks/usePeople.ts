@@ -16,6 +16,7 @@ export interface Person {
   ageRange?: string;
   memberId?: string;
   acoNeeded: "Yes" | "No";
+  checkedIn?: "Yes" | "No";
   zone?: string;
   area?: string;
   name?: string;
@@ -23,6 +24,7 @@ export interface Person {
   note?: string;
   fullName?: string;
   isAcoPlayer?: boolean;
+  isCheckedIn?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -135,6 +137,29 @@ export function useMovePerson() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["people"] });
       queryClient.invalidateQueries({ queryKey: ["teams"] });
+    },
+  });
+}
+
+export function useToggleCheckIn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.patch(`/people/${id}/check-in`).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["people"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useBulkCheckIn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ids, checkedIn }: { ids: string[]; checkedIn: "Yes" | "No" }) =>
+      api.patch("/people/bulk-check-in", { ids, checkedIn }).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["people"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }

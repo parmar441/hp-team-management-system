@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   useDynamicAreas, useCreateArea, useDeleteArea,
   useAddAreaRule, useDeleteAreaRule, useReapplyAreaRules,
@@ -9,9 +9,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { ConfirmDialog } from "../components/ui/confirm-dialog";
 import { useToast } from "../components/ui/toaster";
-import { Map, Plus, Trash2, RefreshCw } from "lucide-react";
+import { PageContainer, PageHeader } from "../components/ui/page";
+import { Map, Plus, Trash2, RefreshCw, Search, X } from "lucide-react";
 
 const AREA_FIELDS = ["gender", "mandal", "ageRange"] as const;
+
+const zoneNameOf = (area: DynamicArea) =>
+  typeof area.zoneId === "object" && area.zoneId ? (area.zoneId as any).name : (area.zoneId as string | undefined);
 
 export default function DynamicAreasPage() {
   const toast = useToast();
@@ -29,105 +33,144 @@ export default function DynamicAreasPage() {
   const [newRule, setNewRule] = useState({ field: "mandal" as typeof AREA_FIELDS[number], matchValue: "", priority: 0 });
   const [deleteAreaId, setDeleteAreaId] = useState<string | null>(null);
   const [deleteRuleId, setDeleteRuleId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  const allAreas: DynamicArea[] = areas ?? [];
+  const totalRules = allAreas.reduce((sum, a) => sum + (a.rules ?? []).length, 0);
+  const zonesCovered = new Set(allAreas.map(zoneNameOf).filter(Boolean)).size;
+
+  const visibleAreas = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return allAreas;
+    return allAreas.filter((a) =>
+      a.name.toLowerCase().includes(q) || (zoneNameOf(a) ?? "").toLowerCase().includes(q)
+    );
+  }, [allAreas, search]);
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-0 sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
-            <Map className="w-5 h-5 text-emerald-600" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dynamic Areas</h1>
-            <p className="text-gray-500 text-sm">Configure areas and field-to-area mapping rules within zones</p>
-          </div>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <button
-            className="border border-gray-200 bg-white rounded-xl hover:bg-gray-50 text-gray-600 px-3 sm:px-4 py-2.5 text-sm font-semibold transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
-            disabled={reapply.isPending}
-            onClick={() => reapply.mutate(undefined, {
-              onSuccess: () => toast.success("Area rules reapplied — people reassigned"),
-              onError: () => toast.error("Failed to reapply area rules"),
-            })}
-          >
-            <RefreshCw className={`w-4 h-4 ${reapply.isPending ? "animate-spin" : ""}`} />
-            <span className="hidden sm:inline">Reapply Rules</span>
-            <span className="sm:hidden">Reapply</span>
-          </button>
-          <button
-            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-3 sm:px-4 py-2.5 text-sm font-semibold transition-colors inline-flex items-center gap-1.5"
-            onClick={() => setShowCreate(true)}
-          >
-            <Plus className="w-4 h-4" /> Add Area
-          </button>
-        </div>
-      </div>
+    <PageContainer width="wide">
+      <PageHeader
+        icon={<Map className="w-5 h-5" />}
+        tone="emerald"
+        title="Areas"
+        subtitle="Organize people into areas within zones using field rules"
+        actions={
+          <>
+            <div className="relative flex-1 sm:flex-initial min-w-[160px]">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search areas or zones…"
+                className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-400"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-gray-100 text-gray-400"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            <button
+              className="border border-gray-200 bg-white rounded-xl hover:bg-gray-50 text-gray-600 px-3 sm:px-4 py-2.5 text-sm font-semibold transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
+              disabled={reapply.isPending}
+              onClick={() => reapply.mutate(undefined, {
+                onSuccess: () => toast.success("Area rules reapplied — people reassigned"),
+                onError: () => toast.error("Failed to reapply area rules"),
+              })}
+            >
+              <RefreshCw className={`w-4 h-4 ${reapply.isPending ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">Reapply</span>
+            </button>
+            <button
+              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-3 sm:px-4 py-2.5 text-sm font-semibold transition-colors inline-flex items-center gap-1.5"
+              onClick={() => setShowCreate(true)}
+            >
+              <Plus className="w-4 h-4" /> Add Area
+            </button>
+          </>
+        }
+      />
 
+      {/* Summary bar */}
+      {!isLoading && allAreas.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-gray-500 border-y border-gray-100 py-2.5">
+          <span><span className="font-semibold text-gray-900">{allAreas.length}</span> area{allAreas.length !== 1 && "s"}</span>
+          <span className="text-gray-300">•</span>
+          <span><span className="font-semibold text-gray-900">{totalRules}</span> rule{totalRules !== 1 && "s"}</span>
+          <span className="text-gray-300">•</span>
+          <span>across <span className="font-semibold text-gray-900">{zonesCovered}</span> zone{zonesCovered !== 1 && "s"}</span>
+        </div>
+      )}
+
+      {/* Content */}
       {isLoading ? (
-        <div className="space-y-4">
-          {[1, 2].map((i) => (
-            <div key={i} className="rounded-2xl border border-gray-100 shadow-sm bg-white p-6">
-              <div className="bg-gray-100 rounded-lg animate-pulse h-32 w-full" />
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="rounded-xl border border-gray-100 shadow-sm bg-white p-4">
+              <div className="bg-gray-100 rounded-lg animate-pulse h-24 w-full" />
             </div>
           ))}
         </div>
-      ) : (areas ?? []).length === 0 ? (
-        <div className="text-center py-20">
-          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-            <Map className="w-7 h-7 text-gray-400" />
-          </div>
-          <p className="text-gray-900 font-semibold text-lg">No areas yet</p>
-          <p className="text-gray-500 text-sm mt-1">Create areas to organize people within zones.</p>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
-          >
-            <Plus className="w-4 h-4" /> Add First Area
-          </button>
+      ) : allAreas.length === 0 ? (
+        <EmptyState onAdd={() => setShowCreate(true)} />
+      ) : visibleAreas.length === 0 ? (
+        <div className="py-12 text-center text-gray-500">
+          <Search className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+          <p className="font-medium text-gray-700">No areas match “{search}”</p>
+          <button onClick={() => setSearch("")} className="mt-2 text-sm text-indigo-600 hover:underline">Clear search</button>
         </div>
       ) : (
-        <div className="space-y-4">
-          {(areas ?? []).map((area: DynamicArea) => {
-            const zoneName = typeof area.zoneId === "object" ? (area.zoneId as any).name : area.zoneId;
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start">
+          {visibleAreas.map((area) => {
+            const zoneName = zoneNameOf(area);
+            const rules = [...(area.rules ?? [])].sort((a, b) => b.priority - a.priority);
             return (
-              <div key={area._id} className="rounded-2xl border border-gray-100 shadow-sm bg-white">
-                <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
-                      <Map className="w-4 h-4 text-emerald-600" />
+              <div key={area._id} className="rounded-xl border border-gray-100 shadow-sm bg-white flex flex-col overflow-hidden hover:shadow-md transition-shadow">
+                {/* Card header */}
+                <div className="px-3 py-2.5 flex items-start justify-between gap-2 border-b border-gray-100 bg-gradient-to-br from-emerald-50/60 to-transparent">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                      <Map className="w-3.5 h-3.5 text-emerald-600" />
                     </div>
-                    <span className="text-gray-900 font-semibold">{area.name}</span>
-                    {zoneName && (
-                      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">{zoneName}</span>
-                    )}
-                    <span className="text-xs text-gray-400">{(area.rules ?? []).length} rules</span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm text-gray-900 font-semibold truncate">{area.name}</span>
+                        {zoneName && (
+                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-700 flex-shrink-0">{zoneName}</span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-gray-400">{rules.length} rule{rules.length !== 1 && "s"}</span>
+                    </div>
                   </div>
                   <button
-                    className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                    className="p-1 rounded-lg hover:bg-red-50 transition-colors flex-shrink-0"
+                    title="Delete area"
                     onClick={() => setDeleteAreaId(area._id)}
                   >
-                    <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" />
+                    <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
                   </button>
                 </div>
 
-                <div className="px-6 py-4 space-y-3">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Rules</p>
-                  {(area.rules ?? []).length === 0 ? (
-                    <p className="text-sm text-gray-400 italic">No rules yet.</p>
+                {/* Rules */}
+                <div className="px-3 py-2.5 flex flex-col gap-2 flex-1">
+                  {rules.length === 0 ? (
+                    <p className="text-xs text-gray-400 italic py-0.5">No rules yet.</p>
                   ) : (
-                    <div className="space-y-2">
-                      {[...(area.rules ?? [])].sort((a, b) => b.priority - a.priority).map((rule: DynamicAreaRule) => (
-                        <div key={rule._id} className="flex items-center gap-3 text-sm bg-gray-50 rounded-xl px-4 py-3">
-                          <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">{rule.field}</span>
+                    <div className="flex flex-col gap-1">
+                      {rules.map((rule: DynamicAreaRule) => (
+                        <div key={rule._id} className="group flex items-center gap-1.5 text-xs bg-gray-50 rounded-lg px-2 py-1.5">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-700">{rule.field}</span>
                           <span className="text-gray-400">=</span>
-                          <span className="font-medium text-gray-900">{rule.matchValue}</span>
-                          <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700">P{rule.priority}</span>
+                          <span className="font-medium text-gray-900 truncate flex-1">{rule.matchValue}</span>
+                          <span className="px-1 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700">P{rule.priority}</span>
                           <button
-                            className="ml-auto p-1 rounded-lg hover:bg-red-50 transition-colors"
+                            className="p-0.5 rounded hover:bg-red-50 transition-colors opacity-60 group-hover:opacity-100"
                             onClick={() => setDeleteRuleId(rule._id)}
                           >
-                            <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
+                            <Trash2 className="w-3 h-3 text-gray-400 hover:text-red-500" />
                           </button>
                         </div>
                       ))}
@@ -135,60 +178,29 @@ export default function DynamicAreasPage() {
                   )}
 
                   {addingRuleTo === area._id ? (
-                    <div className="border border-gray-200 rounded-xl p-4 space-y-3 bg-gray-50/80">
-                      <p className="text-xs font-semibold text-gray-900">Add Rule to {area.name}</p>
-                      <div className="flex flex-wrap gap-2">
-                        <Select value={newRule.field} onValueChange={(v) => setNewRule((r) => ({ ...r, field: v as any }))}>
-                          <SelectTrigger className="flex-1 min-w-[120px] rounded-xl"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {AREA_FIELDS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <input
-                          placeholder="Match value"
-                          value={newRule.matchValue}
-                          onChange={(e) => setNewRule((r) => ({ ...r, matchValue: e.target.value }))}
-                          className="flex-1 min-w-[140px] px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-400"
-                        />
-                        <input
-                          type="number"
-                          placeholder="Priority"
-                          value={newRule.priority}
-                          onChange={(e) => setNewRule((r) => ({ ...r, priority: parseInt(e.target.value, 10) || 0 }))}
-                          className="w-24 px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-400"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          className="border border-gray-200 bg-white rounded-xl hover:bg-gray-50 text-gray-600 px-4 py-2 text-sm font-semibold transition-colors"
-                          onClick={() => setAddingRuleTo(null)}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50"
-                          disabled={!newRule.matchValue || addRule.isPending}
-                          onClick={async () => {
-                            try {
-                              await addRule.mutateAsync({ areaId: area._id, data: newRule });
-                              toast.success("Rule added");
-                              setAddingRuleTo(null);
-                              setNewRule({ field: "mandal", matchValue: "", priority: 0 });
-                            } catch {
-                              toast.error("Failed to add rule");
-                            }
-                          }}
-                        >
-                          {addRule.isPending ? "Adding..." : "Add Rule"}
-                        </button>
-                      </div>
-                    </div>
+                    <RuleForm
+                      fields={AREA_FIELDS}
+                      value={newRule}
+                      onChange={setNewRule}
+                      pending={addRule.isPending}
+                      onCancel={() => setAddingRuleTo(null)}
+                      onSubmit={async () => {
+                        try {
+                          await addRule.mutateAsync({ areaId: area._id, data: newRule });
+                          toast.success("Rule added");
+                          setAddingRuleTo(null);
+                          setNewRule({ field: "mandal", matchValue: "", priority: 0 });
+                        } catch {
+                          toast.error("Failed to add rule");
+                        }
+                      }}
+                    />
                   ) : (
                     <button
-                      className="border border-gray-200 bg-white rounded-xl hover:bg-gray-50 text-gray-600 px-4 py-2 text-sm font-semibold transition-colors inline-flex items-center gap-1.5"
-                      onClick={() => setAddingRuleTo(area._id)}
+                      className="mt-auto w-full border border-dashed border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50/40 text-gray-500 hover:text-indigo-600 px-3 py-1.5 text-xs font-medium transition-colors inline-flex items-center justify-center gap-1.5"
+                      onClick={() => { setAddingRuleTo(area._id); setNewRule({ field: "mandal", matchValue: "", priority: 0 }); }}
                     >
-                      <Plus className="w-3.5 h-3.5" /> Add Rule
+                      <Plus className="w-3 h-3" /> Add Rule
                     </button>
                   )}
                 </div>
@@ -209,6 +221,7 @@ export default function DynamicAreasPage() {
                 value={newArea.name}
                 onChange={(e) => setNewArea((a) => ({ ...a, name: e.target.value }))}
                 placeholder="e.g. North Jersey, Silicon Valley"
+                autoFocus
                 className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-400"
               />
             </div>
@@ -280,6 +293,78 @@ export default function DynamicAreasPage() {
         }}
         loading={deleteRule.isPending}
       />
+    </PageContainer>
+  );
+}
+
+function EmptyState({ onAdd }: { onAdd: () => void }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 text-center py-16 px-6">
+      <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+        <Map className="w-7 h-7 text-emerald-500" />
+      </div>
+      <p className="text-gray-900 font-semibold text-lg">No areas yet</p>
+      <p className="text-gray-500 text-sm mt-1 max-w-sm mx-auto">Create areas to organize people within zones based on field rules.</p>
+      <button
+        onClick={onAdd}
+        className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
+      >
+        <Plus className="w-4 h-4" /> Add First Area
+      </button>
+    </div>
+  );
+}
+
+interface RuleFormProps<F extends string> {
+  fields: readonly F[];
+  value: { field: F; matchValue: string; priority: number };
+  onChange: (v: { field: F; matchValue: string; priority: number }) => void;
+  pending: boolean;
+  onCancel: () => void;
+  onSubmit: () => void;
+}
+
+function RuleForm<F extends string>({ fields, value, onChange, pending, onCancel, onSubmit }: RuleFormProps<F>) {
+  return (
+    <div className="border border-indigo-100 rounded-xl p-3 space-y-2.5 bg-indigo-50/40">
+      <div className="grid grid-cols-2 gap-2">
+        <Select value={value.field} onValueChange={(v) => onChange({ ...value, field: v as F })}>
+          <SelectTrigger className="rounded-lg bg-white"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {fields.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <input
+          type="number"
+          placeholder="Priority"
+          value={value.priority}
+          onChange={(e) => onChange({ ...value, priority: parseInt(e.target.value, 10) || 0 })}
+          className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-400"
+        />
+      </div>
+      <input
+        placeholder="Match value"
+        value={value.matchValue}
+        autoFocus
+        onChange={(e) => onChange({ ...value, matchValue: e.target.value })}
+        onKeyDown={(e) => { if (e.key === "Enter" && value.matchValue && !pending) onSubmit(); }}
+        className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-400"
+      />
+      <div className="flex gap-2">
+        <button
+          className="flex-1 border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-gray-600 px-3 py-2 text-sm font-semibold transition-colors"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-3 py-2 text-sm font-semibold transition-colors disabled:opacity-50"
+          disabled={!value.matchValue || pending}
+          onClick={onSubmit}
+        >
+          {pending ? "Adding..." : "Add Rule"}
+        </button>
+      </div>
     </div>
   );
 }

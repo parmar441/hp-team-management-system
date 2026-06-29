@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+  @keyframes sheetUp { from { transform: translateY(102%); } to { transform: translateY(0); } }
+  @keyframes scrimIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  @keyframes popIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+</style>
+</helmet>
+
+<div style="min-height:100vh;width:100%;display:flex;align-items:center;justify-content:center;background:#08090c;padding:28px 16px;font-family:'Inter',system-ui,sans-serif;">
+
+  <div style="--accent:{{ accent }};--accent-soft:{{ accentSoft }};--accent-border:{{ accentBorder }};--cardpad:{{ cardPad }};--listgap:{{ listGap }};width:390px;height:844px;background:oklch(0.165 0.008 280);border-radius:46px;box-shadow:0 40px 90px rgba(0,0,0,0.6), 0 0 0 11px #16171d, 0 0 0 13px #303137;overflow:hidden;position:relative;display:flex;flex-direction:column;color:oklch(0.97 0.003 280);">
+
+    <!-- status bar -->
+    <div style="height:50px;flex-shrink:0;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;">
+      <div style="font-size:15px;font-weight:700;letter-spacing:0.2px;">9:41</div>
+      <div style="display:flex;align-items:center;gap:7px;">
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="#e8e8ef"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+        <svg width="17" height="12" viewBox="0 0 17 12" fill="none"><path d="M8.5 2.5c2.2 0 4.2.8 5.7 2.2l1.3-1.4C13.7 1.5 11.2.5 8.5.5S3.3 1.5 1.5 3.3l1.3 1.4C4.3 3.3 6.3 2.5 8.5 2.5z" fill="#e8e8ef"/><path d="M8.5 6c1.2 0 2.3.5 3.1 1.3l1.3-1.4C11.8 4.7 10.2 4 8.5 4S5.2 4.7 4.1 5.9l1.3 1.4C6.2 6.5 7.3 6 8.5 6z" fill="#e8e8ef"/><circle cx="8.5" cy="9.8" r="1.6" fill="#e8e8ef"/></svg>
+        <svg width="26" height="13" viewBox="0 0 26 13" fill="none"><rect x="0.5" y="0.5" width="22" height="12" rx="3.5" stroke="#e8e8ef" stroke-opacity="0.45"/><rect x="2" y="2" width="18" height="9" rx="2" fill="#e8e8ef"/><rect x="24" y="4" width="2" height="5" rx="1" fill="#e8e8ef" fill-opacity="0.45"/></svg>
+      </div>
+    </div>
+
+    <!-- header -->
+    <div style="flex-shrink:0;padding:6px 20px 12px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+        <div>
+          <div style="font-family:'Playfair Display',serif;font-size:30px;font-weight:800;letter-spacing:-0.5px;line-height:1;">People</div>
+          <div style="font-size:13px;font-weight:500;color:oklch(0.66 0.012 280);margin-top:7px;">{{ subtitle }}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;">
+          <button onClick="{{ openFilters }}" style="position:relative;width:42px;height:42px;border-radius:13px;background:oklch(0.215 0.012 280);border:1px solid oklch(0.30 0.012 280);display:flex;align-items:center;justify-content:center;cursor:pointer;" style-active="background:oklch(0.26 0.014 280);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 5h16M7 12h10M10 19h4" stroke="oklch(0.82 0.01 280)" stroke-width="2" stroke-linecap="round"/></svg>
+            <sc-if value="{{ hasFilters }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid oklch(0.165 0.008 280);">{{ filterCount }}</div>
+            </sc-if>
+          </button>
+        </div>
+      </div>
+
+      <!-- search -->
+      <div style="margin-top:15px;display:flex;align-items:center;gap:11px;background:oklch(0.20 0.011 280);border:1px solid oklch(0.29 0.012 280);border-radius:15px;padding:0 14px;height:48px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="oklch(0.6 0.01 280)" stroke-width="2"/><path d="M16 16l4 4" stroke="oklch(0.6 0.01 280)" stroke-width="2" stroke-linecap="round"/></svg>
+        <input value="{{ query }}" onChange="{{ onSearch }}" placeholder="Search name, city, member ID…" style="flex:1;min-width:0;background:transparent;border:none;outline:none;font-family:inherit;font-size:15px;font-weight:500;color:oklch(0.96 0.003 280);" />
+        <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ clearSearch }}" style="width:22px;height:22px;border-radius:11px;background:oklch(0.30 0.012 280);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="oklch(0.8 0.01 280)" stroke-width="2.4" stroke-linecap="round"/></svg>
+          </button>
+        </sc-if>
+      </div>
+
+      <!-- active filter chips -->
+      <sc-if value="{{ hasFilters }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:11px;display:flex;gap:8px;overflow-x:auto;">
+          <sc-for list="{{ activeFilters }}" as="f" hint-placeholder-count="2">
+            <div onClick="{{ f.onRemove }}" style="flex-shrink:0;display:flex;align-items:center;gap:6px;background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:10px;height:32px;padding:0 8px 0 11px;cursor:pointer;">
+              <span style="font-size:12.5px;font-weight:600;color:var(--accent);">{{ f.label }}</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round"/></svg>
+            </div>
+          </sc-for>
+          <div onClick="{{ clearFilters }}" style="flex-shrink:0;display:flex;align-items:center;height:32px;padding:0 6px;cursor:pointer;">
+            <span style="font-size:12.5px;font-weight:600;color:oklch(0.62 0.012 280);">Clear all</span>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+
+    <!-- list -->
+    <div style="flex:1;overflow-y:auto;padding:2px 16px 150px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 4px 11px;">
+        <span style="font-size:11.5px;font-weight:700;color:oklch(0.58 0.012 280);letter-spacing:0.8px;">SHOWING {{ filteredCount }}</span>
+        <sc-if value="{{ canEdit }}" hint-placeholder-val="{{ true }}">
+          <span onClick="{{ toggleSelectMode }}" style="font-size:13px;font-weight:600;color:var(--accent);cursor:pointer;">{{ selectLabel }}</span>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:60px 20px;text-align:center;">
+          <div style="width:60px;height:60px;border-radius:20px;background:oklch(0.21 0.011 280);display:flex;align-items:center;justify-content:center;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="oklch(0.5 0.01 280)" stroke-width="2"/><path d="M16.5 16.5L21 21" stroke="oklch(0.5 0.01 280)" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <div>
+            <div style="font-size:16px;font-weight:700;">No people found</div>
+            <div style="font-size:13.5px;font-weight:500;color:oklch(0.6 0.012 280);margin-top:4px;">Try a different search or clear your filters.</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <div style="display:flex;flex-direction:column;gap:var(--listgap);">
+        <sc-for list="{{ people }}" as="p" hint-placeholder-count="6">
+          <div onClick="{{ p.onTap }}" style="background:oklch(0.21 0.012 280);border:1px solid {{ p.cardBorder }};border-radius:18px;padding:var(--cardpad);display:flex;flex-direction:column;gap:11px;cursor:pointer;" style-active="background:oklch(0.245 0.014 280);">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <sc-if value="{{ selectMode }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ p.onCheckbox }}" style="width:24px;height:24px;border-radius:8px;border:2px solid {{ p.checkBorder }};background:{{ p.checkBg }};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <sc-if value="{{ p.selected }}" hint-placeholder-val="{{ false }}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </sc-if>
+                </div>
+              </sc-if>
+              <div style="width:44px;height:44px;border-radius:14px;background:{{ p.avatarBg }};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;font-weight:700;color:{{ p.avatarFg }};">{{ p.initials }}</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:15.5px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.name }}</div>
+                <div style="font-size:12.5px;font-weight:500;color:oklch(0.62 0.012 280);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.sub }}</div>
+              </div>
+              <sc-if value="{{ p.checkedIn }}" hint-placeholder-val="{{ false }}">
+                <div style="width:22px;height:22px;border-radius:11px;background:oklch(0.32 0.06 235);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L19 7" stroke="oklch(0.82 0.13 235)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </sc-if>
+              <button onClick="{{ p.onMore }}" style="width:32px;height:32px;border-radius:10px;background:oklch(0.25 0.012 280);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;" style-active="background:oklch(0.30 0.014 280);">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="oklch(0.66 0.012 280)"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>
+              </button>
+            </div>
+
+            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:7px;">
+              <div style="display:flex;align-items:center;gap:5px;background:var(--accent-soft);border-radius:8px;padding:5px 9px;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-5.7 7-11a7 7 0 10-14 0c0 5.3 7 11 7 11z" stroke="var(--accent)" stroke-width="2"/><circle cx="12" cy="10" r="2.2" fill="var(--accent)"/></svg>
+                <span style="font-size:12px;font-weight:700;color:var(--accent);">{{ p.zone }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:5px;border-radius:8px;padding:5px 9px;background:{{ p.acoBg }};">
+                <span style="font-size:10px;font-weight:700;letter-spacing:0.4px;color:{{ p.acoDim }};">ACO</span>
+                <span style="font-size:12px;font-weight:700;color:{{ p.acoFg }};">{{ p.acoLabel }}</span>
+              </div>
+              <span style="font-size:12px;font-weight:500;color:oklch(0.55 0.012 280);">{{ p.meta }}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- bulk action bar -->
+    <sc-if value="{{ selectMode }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;left:14px;right:14px;bottom:22px;background:oklch(0.235 0.013 280);border:1px solid oklch(0.33 0.013 280);border-radius:20px;padding:13px 14px;box-shadow:0 18px 40px rgba(0,0,0,0.5);display:flex;align-items:center;gap:10px;animation:popIn .18s ease;">
+        <div style="flex-shrink:0;font-size:13.5px;font-weight:700;padding-left:4px;">{{ selectedCount }}</div>
+        <div style="flex:1;display:flex;gap:8px;justify-content:flex-end;">
+          <button onClick="{{ bulkCheckIn }}" style="display:flex;align-items:center;gap:6px;height:40px;padding:0 13px;border-radius:13px;background:oklch(0.30 0.05 235);border:none;cursor:pointer;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L19 7" stroke="oklch(0.85 0.13 235)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span style="font-size:13px;font-weight:600;color:oklch(0.85 0.13 235);">Check in</span>
+          </button>
+          <button onClick="{{ bulkAco }}" style="display:flex;align-items:center;gap:6px;height:40px;padding:0 13px;border-radius:13px;background:oklch(0.30 0.05 162);border:none;cursor:pointer;">
+            <span style="font-size:13px;font-weight:600;color:oklch(0.82 0.15 162);">ACO</span>
+          </button>
+          <button onClick="{{ bulkDelete }}" style="width:40px;height:40px;border-radius:13px;background:oklch(0.30 0.06 18);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M10 7V5h4v2M9 7l1 12h4l1-12" stroke="oklch(0.78 0.15 18)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- FAB -->
+    <sc-if value="{{ showFab }}" hint-placeholder-val="{{ true }}">
+      <button onClick="{{ addPerson }}" style="position:absolute;right:20px;bottom:96px;height:52px;border-radius:17px;background:var(--accent);border:none;display:flex;align-items:center;gap:9px;padding:0 20px 0 17px;cursor:pointer;box-shadow:0 14px 30px var(--accent-border);" style-active="transform:scale(.96);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>
+        <span style="font-size:15px;font-weight:700;color:#fff;">Add Person</span>
+      </button>
+    </sc-if>
+
+    <!-- bottom nav -->
+    <div style="position:absolute;left:0;right:0;bottom:0;height:78px;background:oklch(0.18 0.009 280);border-top:1px solid oklch(0.27 0.011 280);display:flex;align-items:flex-start;padding:11px 8px 0;">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.1" stroke="var(--accent)" stroke-width="1.9"/><path d="M3.5 19c0-3 2.4-5 5.5-5s5.5 2 5.5 5" stroke="var(--accent)" stroke-width="1.9" stroke-linecap="round"/><circle cx="17.5" cy="8.5" r="2.3" stroke="var(--accent)" stroke-width="1.9"/><path d="M16.5 14c2.5 0 4 1.7 4 4.2" stroke="var(--accent)" stroke-width="1.9" stroke-linecap="round"/></svg>
+        <span style="font-size:10.5px;font-weight:700;color:var(--accent);">People</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" stroke="oklch(0.55 0.012 280)" stroke-width="2" stroke-linecap="round"/></svg>
+        <span style="font-size:10.5px;font-weight:600;color:oklch(0.55 0.012 280);">List</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="9" r="2.4" stroke="oklch(0.55 0.012 280)" stroke-width="1.9"/><circle cx="16" cy="9" r="2.4" stroke="oklch(0.55 0.012 280)" stroke-width="1.9"/><path d="M3.5 18c0-2.4 2-4 4.5-4s4.5 1.6 4.5 4M12.5 18c.4-2.2 2-3.4 4-3.4s3.6 1.2 4 3.4" stroke="oklch(0.55 0.012 280)" stroke-width="1.9" stroke-linecap="round"/></svg>
+        <span style="font-size:10.5px;font-weight:600;color:oklch(0.55 0.012 280);">Teams</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="5" y="3.5" width="14" height="17" rx="2.5" stroke="oklch(0.55 0.012 280)" stroke-width="1.9"/><path d="M9 3.5h6v3H9zM9 12h6M9 16h4" stroke="oklch(0.55 0.012 280)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span style="font-size:10.5px;font-weight:600;color:oklch(0.55 0.012 280);">Assign</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="oklch(0.55 0.012 280)" stroke-width="1.9"/><path d="M16 16l4 4" stroke="oklch(0.55 0.012 280)" stroke-width="1.9" stroke-linecap="round"/></svg>
+        <span style="font-size:10.5px;font-weight:600;color:oklch(0.55 0.012 280);">Search</span>
+      </div>
+    </div>
+
+    <!-- ===== FILTER SHEET ===== -->
+    <sc-if value="{{ filterSheetOpen }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeFilters }}" style="position:absolute;inset:0;background:rgba(0,0,0,0.55);animation:scrimIn .2s ease;z-index:20;"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;max-height:80%;background:oklch(0.195 0.011 280);border-radius:26px 26px 0 0;border-top:1px solid oklch(0.3 0.012 280);display:flex;flex-direction:column;z-index:21;animation:sheetUp .26s cubic-bezier(.2,.8,.2,1);">
+        <div style="flex-shrink:0;padding:12px 0 4px;display:flex;justify-content:center;"><div style="width:38px;height:5px;border-radius:3px;background:oklch(0.4 0.012 280);"></div></div>
+        <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:6px 22px 12px;">
+          <div style="font-family:'Playfair Display',serif;font-size:21px;font-weight:700;">Filters</div>
+          <span onClick="{{ clearFilters }}" style="font-size:13px;font-weight:600;color:oklch(0.62 0.012 280);cursor:pointer;">Reset</span>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:4px 22px 16px;">
+          <sc-for list="{{ filterGroups }}" as="g" hint-placeholder-count="4">
+            <div style="margin-bottom:20px;">
+              <div style="font-size:11.5px;font-weight:700;letter-spacing:0.7px;color:oklch(0.58 0.012 280);margin-bottom:11px;">{{ g.title }}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <sc-for list="{{ g.options }}" as="o" hint-placeholder-count="4">
+                  <div onClick="{{ o.onSelect }}" style="display:flex;align-items:center;height:38px;padding:0 15px;border-radius:12px;border:1px solid {{ o.border }};background:{{ o.bg }};cursor:pointer;">
+                    <span style="font-size:13.5px;font-weight:600;color:{{ o.fg }};">{{ o.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="flex-shrink:0;padding:10px 22px 30px;border-top:1px solid oklch(0.27 0.011 280);">
+          <button onClick="{{ closeFilters }}" style="width:100%;height:52px;border-radius:16px;background:var(--accent);border:none;color:#fff;font-family:inherit;font-size:15.5px;font-weight:700;cursor:pointer;" style-active="transform:scale(.99);">Show {{ filteredCount }} people</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== ACTION SHEET ===== -->
+    <sc-if value="{{ actionOpen }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeActions }}" style="position:absolute;inset:0;background:rgba(0,0,0,0.55);animation:scrimIn .2s ease;z-index:30;"></div>
+      <div style="position:absolute;left:12px;right:12px;bottom:14px;z-index:31;animation:sheetUp .24s cubic-bezier(.2,.8,.2,1);">
+        <div style="background:oklch(0.215 0.012 280);border:1px solid oklch(0.3 0.012 280);border-radius:22px;overflow:hidden;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid oklch(0.27 0.011 280);">
+            <div style="width:42px;height:42px;border-radius:13px;background:{{ action.avatarBg }};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:{{ action.avatarFg }};">{{ action.initials }}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:15.5px;font-weight:700;">{{ action.name }}</div>
+              <div style="font-size:12.5px;font-weight:500;color:oklch(0.62 0.012 280);margin-top:2px;">{{ action.sub }}</div>
+            </div>
+          </div>
+          <div onClick="{{ openDetailFromAction }}" style="display:flex;align-items:center;gap:13px;padding:15px 18px;cursor:pointer;" style-active="background:oklch(0.245 0.014 280);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="oklch(0.7 0.012 280)" stroke-width="1.9"/><path d="M12 11v5M12 8h.01" stroke="oklch(0.7 0.012 280)" stroke-width="2" stroke-linecap="round"/></svg>
+            <span style="font-size:15px;font-weight:600;">View full details</span>
+          </div>
+          <sc-if value="{{ canEdit }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;">
+              <div onClick="{{ checkInCurrent }}" style="display:flex;align-items:center;gap:13px;padding:15px 18px;cursor:pointer;border-top:1px solid oklch(0.27 0.011 280);" style-active="background:oklch(0.245 0.014 280);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="oklch(0.78 0.13 235)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="oklch(0.78 0.13 235)" stroke-width="1.9"/></svg>
+                <span style="font-size:15px;font-weight:600;">{{ action.checkInLabel }}</span>
+              </div>
+              <div onClick="{{ toggleAcoCurrent }}" style="display:flex;align-items:center;gap:13px;padding:15px 18px;cursor:pointer;border-top:1px solid oklch(0.27 0.011 280);" style-active="background:oklch(0.245 0.014 280);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="7" width="18" height="10" rx="5" stroke="oklch(0.78 0.14 162)" stroke-width="1.9"/><circle cx="9" cy="12" r="2.4" fill="oklch(0.78 0.14 162)"/></svg>
+                <span style="font-size:15px;font-weight:600;">{{ action.acoActionLabel }}</span>
+              </div>
+              <div onClick="{{ moveCurrent }}" style="display:flex;align-items:center;gap:13px;padding:15px 18px;cursor:pointer;border-top:1px solid oklch(0.27 0.011 280);" style-active="background:oklch(0.245 0.014 280);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12h12M12 7l5 5-5 5M20 5v14" stroke="oklch(0.7 0.012 280)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span style="font-size:15px;font-weight:600;">Move to team</span>
+              </div>
+              <div onClick="{{ deleteCurrent }}" style="display:flex;align-items:center;gap:13px;padding:15px 18px;cursor:pointer;border-top:1px solid oklch(0.27 0.011 280);" style-active="background:oklch(0.245 0.014 280);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M10 7V5h4v2M9 7l1 12h4l1-12" stroke="oklch(0.72 0.16 18)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span style="font-size:15px;font-weight:600;color:oklch(0.74 0.16 18);">Delete person</span>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+        <button onClick="{{ closeActions }}" style="width:100%;height:52px;border-radius:18px;background:oklch(0.255 0.013 280);border:1px solid oklch(0.32 0.013 280);color:oklch(0.9 0.005 280);font-family:inherit;font-size:15.5px;font-weight:700;cursor:pointer;">Cancel</button>
+      </div>
+    </sc-if>
+
+    <!-- ===== DETAIL SHEET ===== -->
+    <sc-if value="{{ detailOpen }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeDetail }}" style="position:absolute;inset:0;background:rgba(0,0,0,0.55);animation:scrimIn .2s ease;z-index:40;"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;height:88%;background:oklch(0.195 0.011 280);border-radius:26px 26px 0 0;border-top:1px solid oklch(0.3 0.012 280);display:flex;flex-direction:column;z-index:41;animation:sheetUp .26s cubic-bezier(.2,.8,.2,1);">
+        <div style="flex-shrink:0;padding:12px 0 4px;display:flex;justify-content:center;"><div style="width:38px;height:5px;border-radius:3px;background:oklch(0.4 0.012 280);"></div></div>
+        <div style="flex:1;overflow-y:auto;padding:8px 22px 30px;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div style="width:58px;height:58px;border-radius:18px;background:{{ detail.avatarBg }};display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:700;color:{{ detail.avatarFg }};">{{ detail.initials }}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-family:'Playfair Display',serif;font-size:23px;font-weight:700;line-height:1.1;">{{ detail.name }}</div>
+              <div style="font-size:13px;font-weight:500;color:oklch(0.62 0.012 280);margin-top:4px;">{{ detail.sub }}</div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;">
+            <div style="display:flex;align-items:center;gap:5px;background:var(--accent-soft);border-radius:9px;padding:6px 11px;">
+              <span style="font-size:12.5px;font-weight:700;color:var(--accent);">{{ detail.zone }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;border-radius:9px;padding:6px 11px;background:{{ detail.acoBg }};">
+              <span style="font-size:10px;font-weight:700;letter-spacing:0.4px;color:{{ detail.acoDim }};">ACO</span>
+              <span style="font-size:12.5px;font-weight:700;color:{{ detail.acoFg }};">{{ detail.acoLabel }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;border-radius:9px;padding:6px 11px;background:{{ detail.ciBg }};">
+              <span style="font-size:12.5px;font-weight:700;color:{{ detail.ciFg }};">{{ detail.ciLabel }}</span>
+            </div>
+          </div>
+
+          <div style="margin-top:20px;background:oklch(0.215 0.012 280);border:1px solid oklch(0.29 0.012 280);border-radius:18px;overflow:hidden;">
+            <sc-for list="{{ detail.rows }}" as="r" hint-placeholder-count="8">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 16px;border-bottom:1px solid {{ r.border }};">
+                <span style="font-size:13px;font-weight:500;color:oklch(0.6 0.012 280);flex-shrink:0;">{{ r.label }}</span>
+                <span style="font-size:13.5px;font-weight:600;text-align:right;">{{ r.value }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ canEdit }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;gap:10px;margin-top:18px;">
+              <button onClick="{{ checkInFromDetail }}" style="flex:1;height:50px;border-radius:15px;background:oklch(0.30 0.05 235);border:none;color:oklch(0.85 0.13 235);font-family:inherit;font-size:14.5px;font-weight:700;cursor:pointer;">{{ detail.checkInLabel }}</button>
+              <button onClick="{{ acoFromDetail }}" style="flex:1;height:50px;border-radius:15px;background:oklch(0.30 0.05 162);border:none;color:oklch(0.82 0.15 162);font-family:inherit;font-size:14.5px;font-weight:700;cursor:pointer;">{{ detail.acoActionLabel }}</button>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- toast -->
+    <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;left:50%;bottom:92px;transform:translateX(-50%);z-index:50;background:oklch(0.30 0.012 280);border:1px solid oklch(0.4 0.013 280);border-radius:13px;padding:11px 18px;box-shadow:0 12px 30px rgba(0,0,0,0.5);animation:toastIn .22s ease;white-space:nowrap;">
+        <span style="font-size:13.5px;font-weight:600;">{{ toast }}</span>
+      </div>
+    </sc-if>
+
+    <!-- home indicator -->
+    <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:135px;height:5px;border-radius:3px;background:#fff;opacity:0.5;z-index:60;"></div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:456,&quot;height&quot;:908},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#7c6cf5&quot;,&quot;options&quot;:[&quot;#7c6cf5&quot;,&quot;#4f8ef7&quot;,&quot;#2fbf86&quot;,&quot;#f2607d&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Theme&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;comfortable&quot;,&quot;options&quot;:[&quot;comfortable&quot;,&quot;compact&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;admin&quot;,&quot;options&quot;:[&quot;admin&quot;,&quot;zone_lead&quot;,&quot;area_lead&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Access&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const seed = [
+      { f:'Aarav', l:'Patel',   city:'Edison',      st:'New Jersey',    sa:'NJ', ctry:'USA',    g:'M', zone:'North',   area:'Area 1', age:'26-40', cat:'Player',    fam:'PAT-014', aco:'Yes', ci:'Yes', note:'Captain candidate.' },
+      { f:'Aanya', l:'Rao',     city:'Madison',     st:'Wisconsin',     sa:'WI', ctry:'USA',    g:'F', zone:'North',   area:'Area 2', age:'18-25', cat:'Player',    fam:'RAO-021', aco:'Yes', ci:'No',  note:'' },
+      { f:'Aditi', l:'Shah',    city:'Boston',      st:'Massachusetts', sa:'MA', ctry:'USA',    g:'F', zone:'East',    area:'Area 1', age:'26-40', cat:'Player',    fam:'SHA-003', aco:'Yes', ci:'Yes', note:'Prefers morning slots.' },
+      { f:'Amit',  l:'Pandya',  city:'San Jose',    st:'California',    sa:'CA', ctry:'USA',    g:'M', zone:'West',    area:'Area 3', age:'41-60', cat:'Coach',     fam:'PAN-009', aco:'Yes', ci:'No',  note:'' },
+      { f:'Ananya',l:'Mehta',   city:'Austin',      st:'Texas',         sa:'TX', ctry:'USA',    g:'F', zone:'South',   area:'Area 2', age:'13-17', cat:'Junior',    fam:'MEH-018', aco:'No',  ci:'No',  note:'' },
+      { f:'Arjun', l:'Desai',   city:'Columbus',    st:'Ohio',          sa:'OH', ctry:'USA',    g:'M', zone:'Central', area:'Area 1', age:'26-40', cat:'Player',    fam:'DES-007', aco:'Yes', ci:'Yes', note:'' },
+      { f:'Diya',  l:'Iyer',    city:'Seattle',     st:'Washington',    sa:'WA', ctry:'USA',    g:'F', zone:'West',    area:'Area 4', age:'18-25', cat:'Player',    fam:'IYE-030', aco:'Yes', ci:'No',  note:'New registration.' },
+      { f:'Ishaan',l:'Joshi',   city:'Atlanta',     st:'Georgia',       sa:'GA', ctry:'USA',    g:'M', zone:'South',   area:'Area 3', age:'26-40', cat:'Player',    fam:'JOS-012', aco:'No',  ci:'No',  note:'' },
+      { f:'Kavya', l:'Nair',    city:'Chicago',     st:'Illinois',      sa:'IL', ctry:'USA',    g:'F', zone:'Central', area:'Area 2', age:'26-40', cat:'Player',    fam:'NAI-025', aco:'Yes', ci:'Yes', note:'' },
+      { f:'Manav', l:'Gupta',   city:'Toronto',     st:'Ontario',       sa:'ON', ctry:'Canada', g:'M', zone:'North',   area:'Area 1', age:'18-25', cat:'Player',    fam:'GUP-005', aco:'Yes', ci:'No',  note:'' },
+      { f:'Neha',  l:'Verma',   city:'Phoenix',     st:'Arizona',       sa:'AZ', ctry:'USA',    g:'F', zone:'West',    area:'Area 3', age:'41-60', cat:'Volunteer', fam:'VER-016', aco:'No',  ci:'Yes', note:'Helps at registration.' },
+      { f:'Rohan', l:'Kapoor',  city:'Newark',      st:'New Jersey',    sa:'NJ', ctry:'USA',    g:'M', zone:'North',   area:'Area 2', age:'26-40', cat:'Player',    fam:'KAP-011', aco:'Yes', ci:'Yes', note:'' },
+      { f:'Saanvi',l:'Reddy',   city:'Dallas',      st:'Texas',         sa:'TX', ctry:'USA',    g:'F', zone:'South',   area:'Area 1', age:'13-17', cat:'Junior',    fam:'RED-028', aco:'Yes', ci:'No',  note:'' },
+      { f:'Vihaan',l:'Bhatt',   city:'Detroit',     st:'Michigan',      sa:'MI', ctry:'USA',    g:'M', zone:'Central', area:'Area 4', age:'26-40', cat:'Player',    fam:'BHA-002', aco:'Yes', ci:'No',  note:'' },
+      { f:'Tara',  l:'Menon',   city:'Vancouver',   st:'British Columbia', sa:'BC', ctry:'Canada', g:'F', zone:'West', area:'Area 1', age:'18-25', cat:'Player',  fam:'MEN-019', aco:'Yes', ci:'Yes', note:'' },
+      { f:'Kabir', l:'Sethi',   city:'Philadelphia',st:'Pennsylvania',  sa:'PA', ctry:'USA',    g:'M', zone:'East',    area:'Area 2', age:'41-60', cat:'Coach',     fam:'SET-022', aco:'No',  ci:'No',  note:'' },
+    ];
+    const people = seed.map((p, i) => ({
+      id: i,
+      firstName: p.f, lastName: p.l,
+      name: p.f + ' ' + p.l,
+      email: (p.f + '.' + p.l).toLowerCase() + '@example.com',
+      phone: '+1 (555) ' + String(100 + i).padStart(3, '0') + '-' + String(2000 + i * 7).slice(0, 4),
+      city: p.city, state: p.st, stateAbbr: p.sa, country: p.ctry,
+      gender: p.g, mandal: p.st,
+      zone: p.zone, area: p.area, ageRange: p.age, category: p.cat,
+      familyId: p.fam, memberId: 'M' + (10480 + i * 13),
+      acoNeeded: p.aco, checkedIn: p.ci, note: p.note,
+    }));
+    this.state = {
+      query: '',
+      filters: { zone: '', area: '', gender: '', country: '', aco: '', checkedIn: '' },
+      filterSheetOpen: false,
+      selectMode: false,
+      selected: {},
+      actionPerson: null,
+      detailPerson: null,
+      toast: '',
+      people,
+    };
+    this._toastTimer = null;
+  }
+
+  hexToRgb(hex) {
+    const h = hex.replace('#', '');
+    const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+
+  showToast(msg) {
+    if (this._toastTimer) clearTimeout(this._toastTimer);
+    this.setState({ toast: msg });
+    this._toastTimer = setTimeout(() => this.setState({ toast: '' }), 1900);
+  }
+
+  onSearch = (e) => this.setState({ query: e.target.value });
+  clearSearch = () => this.setState({ query: '' });
+
+  openFilters = () => this.setState({ filterSheetOpen: true });
+  closeFilters = () => this.setState({ filterSheetOpen: false });
+  clearFilters = () => this.setState({ filters: { zone: '', area: '', gender: '', country: '', aco: '', checkedIn: '' } });
+  selectFilter(key, val) {
+    this.setState(s => ({ filters: { ...s.filters, [key]: s.filters[key] === val ? '' : val } }));
+  }
+  removeFilter(key) { this.setState(s => ({ filters: { ...s.filters, [key]: '' } })); }
+
+  toggleSelectMode = () => this.setState(s => ({ selectMode: !s.selectMode, selected: {} }));
+  toggleSelected(id) { this.setState(s => ({ selected: { ...s.selected, [id]: !s.selected[id] } })); }
+
+  openActions(id) { this.setState({ actionPerson: id }); }
+  closeActions = () => this.setState({ actionPerson: null });
+  openDetail(id) { this.setState({ detailPerson: id, actionPerson: null }); }
+  closeDetail = () => this.setState({ detailPerson: null });
+
+  flipAco(id) {
+    let becameNo = false;
+    this.setState(s => ({
+      people: s.people.map(p => {
+        if (p.id !== id) return p;
+        const next = p.acoNeeded === 'Yes' ? 'No' : 'Yes';
+        if (next === 'No') becameNo = true;
+        return { ...p, acoNeeded: next };
+      })
+    }), () => this.showToast(becameNo ? 'ACO set to No — removed from team' : 'ACO set to Yes'));
+  }
+  flipCheckIn(id) {
+    let now = '';
+    this.setState(s => ({
+      people: s.people.map(p => {
+        if (p.id !== id) return p;
+        now = p.checkedIn === 'Yes' ? 'No' : 'Yes';
+        return { ...p, checkedIn: now };
+      })
+    }), () => this.showToast(now === 'Yes' ? 'Checked in' : 'Checked out'));
+  }
+  deletePerson(id) {
+    this.setState(s => ({ people: s.people.filter(p => p.id !== id), actionPerson: null, detailPerson: null }));
+    this.showToast('Person deleted');
+  }
+
+  bulkCheckIn = () => {
+    const sel = this.state.selected;
+    this.setState(s => ({ people: s.people.map(p => sel[p.id] ? { ...p, checkedIn: 'Yes' } : p), selectMode: false, selected: {} }));
+    this.showToast('Checked in selected people');
+  };
+  bulkAco = () => {
+    const sel = this.state.selected;
+    this.setState(s => ({ people: s.people.map(p => sel[p.id] ? { ...p, acoNeeded: p.acoNeeded === 'Yes' ? 'No' : 'Yes' } : p), selectMode: false, selected: {} }));
+    this.showToast('Toggled ACO for selected');
+  };
+  bulkDelete = () => {
+    const sel = this.state.selected;
+    this.setState(s => ({ people: s.people.filter(p => !sel[p.id]), selectMode: false, selected: {} }));
+    this.showToast('Deleted selected people');
+  };
+  addPerson = () => this.showToast('Add Person — opens form');
+  moveCurrent = () => { this.setState({ actionPerson: null }); this.showToast('Move to team — pick a team'); };
+
+  prettyFilter(key, val) {
+    if (key === 'gender') return val === 'M' ? 'Male' : 'Female';
+    if (key === 'aco') return val === 'Yes' ? 'ACO players' : 'Non-ACO';
+    if (key === 'checkedIn') return val === 'Yes' ? 'Checked in' : 'Not checked in';
+    return val;
+  }
+
+  avatarColors(name) {
+    let s = 0;
+    for (let i = 0; i < name.length; i++) s += name.charCodeAt(i);
+    const hue = (s * 37) % 360;
+    return { bg: `oklch(0.33 0.07 ${hue})`, fg: `oklch(0.85 0.13 ${hue})` };
+  }
+
+  acoStyle(yes) {
+    return yes
+      ? { acoBg: 'oklch(0.31 0.055 162)', acoFg: 'oklch(0.83 0.15 162)', acoDim: 'oklch(0.62 0.1 162)', acoLabel: 'Yes' }
+      : { acoBg: 'oklch(0.26 0.006 280)', acoFg: 'oklch(0.72 0.012 280)', acoDim: 'oklch(0.55 0.012 280)', acoLabel: 'No' };
+  }
+
+  viewPerson(p) {
+    const av = this.avatarColors(p.name);
+    const aco = this.acoStyle(p.acoNeeded === 'Yes');
+    const selected = !!this.state.selected[p.id];
+    return {
+      id: p.id, name: p.name, initials: (p.firstName[0] + p.lastName[0]).toUpperCase(),
+      sub: p.city + ', ' + p.stateAbbr,
+      meta: p.area + ' · ' + (p.gender === 'M' ? 'Male' : 'Female'),
+      zone: p.zone,
+      avatarBg: av.bg, avatarFg: av.fg,
+      checkedIn: p.checkedIn === 'Yes',
+      selected,
+      cardBorder: selected ? 'var(--accent-border)' : 'oklch(0.30 0.012 280)',
+      checkBorder: selected ? 'var(--accent)' : 'oklch(0.4 0.012 280)',
+      checkBg: selected ? 'var(--accent)' : 'transparent',
+      ...aco,
+      onTap: () => { this.state.selectMode ? this.toggleSelected(p.id) : this.openDetail(p.id); },
+      onCheckbox: (e) => { e.stopPropagation(); this.toggleSelected(p.id); },
+      onMore: (e) => { e.stopPropagation(); this.openActions(p.id); },
+    };
+  }
+
+  renderVals() {
+    const st = this.state;
+    const role = this.props.role || 'admin';
+    const canEdit = role === 'admin';
+
+    // accent tokens
+    const accent = this.props.accent || '#7c6cf5';
+    const [r, g, b] = this.hexToRgb(accent);
+    const accentSoft = `rgba(${r},${g},${b},0.16)`;
+    const accentBorder = `rgba(${r},${g},${b},0.4)`;
+
+    // density
+    const density = this.props.density || 'comfortable';
+    const cardPad = density === 'compact' ? '12px' : '15px';
+    const listGap = density === 'compact' ? '8px' : '11px';
+
+    const f = st.filters;
+    const q = st.query.trim().toLowerCase();
+    const filtered = st.people.filter(p => {
+      if (q && !(p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q) || p.city.toLowerCase().includes(q) || p.memberId.toLowerCase().includes(q))) return false;
+      if (f.zone && p.zone !== f.zone) return false;
+      if (f.area && p.area !== f.area) return false;
+      if (f.gender && p.gender !== f.gender) return false;
+      if (f.country && p.country !== f.country) return false;
+      if (f.aco && p.acoNeeded !== f.aco) return false;
+      if (f.checkedIn && p.checkedIn !== f.checkedIn) return false;
+      return true;
+    });
+
+    const people = filtered.map(p => this.viewPerson(p));
+
+    // active filters
+    const activeFilters = [];
+    Object.keys(f).forEach(key => {
+      if (f[key]) activeFilters.push({ key, label: this.prettyFilter(key, f[key]), onRemove: () => this.removeFilter(key) });
+    });
+    const filterCount = activeFilters.length;
+
+    // filter groups
+    const uniq = (arr) => [...new Set(arr)];
+    const defs = [
+      { key: 'zone', title: 'ZONE', vals: uniq(st.people.map(p => p.zone)).sort() },
+      { key: 'area', title: 'AREA', vals: uniq(st.people.map(p => p.area)).sort() },
+      { key: 'gender', title: 'GENDER', vals: ['M', 'F'] },
+      { key: 'country', title: 'COUNTRY', vals: uniq(st.people.map(p => p.country)).sort() },
+      { key: 'aco', title: 'ACO PARTICIPATION', vals: ['Yes', 'No'] },
+      { key: 'checkedIn', title: 'CHECK-IN STATUS', vals: ['Yes', 'No'] },
+    ];
+    const filterGroups = defs.map(d => ({
+      key: d.key, title: d.title,
+      options: d.vals.map(v => {
+        const sel = f[d.key] === v;
+        return {
+          value: v, label: this.prettyFilter(d.key, v),
+          bg: sel ? 'var(--accent-soft)' : 'oklch(0.225 0.012 280)',
+          border: sel ? 'var(--accent-border)' : 'oklch(0.31 0.012 280)',
+          fg: sel ? 'var(--accent)' : 'oklch(0.82 0.008 280)',
+          onSelect: () => this.selectFilter(d.key, v),
+        };
+      })
+    }));
+
+    // selected count
+    const selectedCount = st.people.filter(p => st.selected[p.id]).length;
+
+    // action sheet
+    const ap = st.actionPerson != null ? st.people.find(p => p.id === st.actionPerson) : null;
+    let action = {};
+    if (ap) {
+      const av = this.avatarColors(ap.name);
+      action = {
+        id: ap.id, name: ap.name, initials: (ap.firstName[0] + ap.lastName[0]).toUpperCase(),
+        sub: ap.zone + ' · ' + ap.area + ' · ' + ap.memberId,
+        avatarBg: av.bg, avatarFg: av.fg,
+        checkInLabel: ap.checkedIn === 'Yes' ? 'Mark as not checked in' : 'Check in now',
+        acoActionLabel: ap.acoNeeded === 'Yes' ? 'Set ACO to No' : 'Set ACO to Yes',
+      };
+    }
+
+    // detail sheet
+    const dp = st.detailPerson != null ? st.people.find(p => p.id === st.detailPerson) : null;
+    let detail = {};
+    if (dp) {
+      const av = this.avatarColors(dp.name);
+      const aco = this.acoStyle(dp.acoNeeded === 'Yes');
+      const ci = dp.checkedIn === 'Yes';
+      const rawRows = [
+        ['Member ID', dp.memberId], ['Family ID', dp.familyId],
+        ['Gender', dp.gender === 'M' ? 'Male' : 'Female'], ['Age range', dp.ageRange],
+        ['Category', dp.category], ['Email', dp.email], ['Phone', dp.phone],
+        ['City', dp.city], ['State', dp.state], ['Country', dp.country],
+        ['Mandal', dp.mandal], ['Zone', dp.zone], ['Area', dp.area], ['Note', dp.note],
+      ].filter(([, v]) => v);
+      detail = {
+        id: dp.id, name: dp.name, initials: (dp.firstName[0] + dp.lastName[0]).toUpperCase(),
+        sub: dp.city + ', ' + dp.state + ' · ' + dp.country,
+        avatarBg: av.bg, avatarFg: av.fg, zone: dp.zone,
+        acoBg: aco.acoBg, acoFg: aco.acoFg, acoDim: aco.acoDim, acoLabel: aco.acoLabel,
+        ciBg: ci ? 'oklch(0.31 0.055 235)' : 'oklch(0.26 0.006 280)',
+        ciFg: ci ? 'oklch(0.83 0.13 235)' : 'oklch(0.7 0.012 280)',
+        ciLabel: ci ? 'Checked in' : 'Not checked in',
+        checkInLabel: ci ? 'Check out' : 'Check in',
+        acoActionLabel: dp.acoNeeded === 'Yes' ? 'ACO → No' : 'ACO → Yes',
+        rows: rawRows.map(([label, value], i) => ({
+          label, value,
+          border: i === rawRows.length - 1 ? 'transparent' : 'oklch(0.27 0.011 280)',
+        })),
+      };
+    }
+
+    return {
+      accent, accentSoft, accentBorder, cardPad, listGap,
+      query: st.query, hasQuery: st.query.length > 0,
+      subtitle: st.people.length + ' registered members',
+      onSearch: this.onSearch, clearSearch: this.clearSearch,
+      people, filteredCount: filtered.length, noResults: filtered.length === 0,
+      hasFilters: filterCount > 0, filterCount, activeFilters,
+      clearFilters: this.clearFilters,
+      openFilters: this.openFilters, closeFilters: this.closeFilters,
+      filterSheetOpen: st.filterSheetOpen, filterGroups,
+      canEdit, showFab: canEdit && !st.selectMode,
+      selectMode: st.selectMode, toggleSelectMode: this.toggleSelectMode,
+      selectLabel: st.selectMode ? 'Done' : 'Select',
+      selectedCount: selectedCount + ' selected',
+      bulkCheckIn: this.bulkCheckIn, bulkAco: this.bulkAco, bulkDelete: this.bulkDelete,
+      addPerson: this.addPerson,
+      actionOpen: !!ap, action, closeActions: this.closeActions,
+      checkInCurrent: () => this.flipCheckIn(action.id),
+      toggleAcoCurrent: () => this.flipAco(action.id),
+      deleteCurrent: () => this.deletePerson(action.id),
+      moveCurrent: this.moveCurrent,
+      openDetailFromAction: () => this.openDetail(action.id),
+      detailOpen: !!dp, detail, closeDetail: this.closeDetail,
+      checkInFromDetail: () => this.flipCheckIn(detail.id),
+      acoFromDetail: () => this.flipAco(detail.id),
+      hasToast: st.toast.length > 0, toast: st.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>
