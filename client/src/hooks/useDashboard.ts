@@ -21,3 +21,23 @@ export function useTreeStats() {
     queryFn: () => api.get("/dashboard/tree-stats").then((r) => r.data),
   });
 }
+
+export interface DashboardOverview {
+  counts: {
+    people: { count: number; checkedIn: number };
+    aco: { count: number; checkedIn: number };
+    teams: { count: number; checkedIn: number };
+    hotels: { count: number; checkedIn: number };
+    rooms: { count: number; checkedIn: number };
+  };
+  checkedInTotal: number;
+  peopleTotal: number;
+  hotels: { id: string; name: string; totalSlots: number; occupied: number; remaining: number; zones: { zone: string; slots: number }[] }[];
+}
+
+export function useDashboardOverview(zone?: string, area?: string) {
+  return useQuery<DashboardOverview>({
+    queryKey: ["dashboard", "overview", zone ?? "", area ?? ""],
+    queryFn: () => api.get("/dashboard/overview", { params: { zone: zone || undefined, area: area || undefined } }).then((r) => r.data),
+  });
+}

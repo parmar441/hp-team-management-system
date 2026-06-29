@@ -1,134 +1,125 @@
-import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { Users, TrendingUp, UsersRound, Hotel, UserPlus, ClipboardList, Sparkles, FileText, ChevronRight } from "lucide-react";
-import { useDashboardStats } from "../../hooks/useDashboard";
-import { usePeople, type Person } from "../../hooks/usePeople";
-import { useMe } from "../../hooks/useAuth";
-import { Card, Skeleton } from "../ui";
+import { useState } from "react";
+import { Hotel } from "lucide-react";
+import { useDashboardOverview } from "../../hooks/useDashboard";
+import { useDynamicZoneNames } from "../../hooks/useDynamicZones";
+import { useDynamicAreas } from "../../hooks/useDynamicAreas";
+import { ScreenHeader, Card, Pill, CardSkeletons } from "../ui";
 
-const ROLE_LABEL: Record<string, string> = {
-  admin: "Admin", zone_lead: "Zone Lead", area_lead: "Area Lead", hotel_person: "Hotel Person", user: "User",
-};
+const ROWS = [
+  { key: "people", label: "People", dot: "var(--m-faint)" },
+  { key: "aco",    label: "ACO",    dot: "#9ca3af" },
+  { key: "teams",  label: "Teams",  dot: "var(--m-amber-fg)" },
+  { key: "hotels", label: "Hotels", dot: "var(--m-sky-fg)" },
+  { key: "rooms",  label: "Rooms",  dot: "var(--m-aco-fg)" },
+] as const;
 
-type Tone = { bg: string; fg: string };
-const TONES: Record<string, Tone> = {
-  indigo:  { bg: "var(--m-accent-soft)", fg: "var(--m-accent)" },
-  emerald: { bg: "var(--m-aco-bg)",      fg: "var(--m-aco-fg)" },
-  sky:     { bg: "var(--m-sky-bg)",      fg: "var(--m-sky-fg)" },
-  amber:   { bg: "var(--m-amber-bg)",    fg: "var(--m-amber-fg)" },
-};
+const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : 0);
 
-function StatCard({ icon, value, label, tone, loading }: {
-  icon: React.ReactNode; value?: number; label: string; tone: Tone; loading?: boolean;
+function Dropdown({ value, onChange, allLabel, options }: {
+  value: string; onChange: (v: string) => void; allLabel: string; options: string[];
 }) {
   return (
-    <Card className="!p-[15px]">
-      <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center mb-3"
-        style={{ background: tone.bg, color: tone.fg }}>
-        {icon}
-      </div>
-      {loading
-        ? <Skeleton className="h-7 w-12 rounded-lg mb-1" />
-        : <p className="m-serif text-[28px] font-extrabold leading-none tabular-nums">{value ?? 0}</p>}
-      <p className="text-[12.5px] font-medium text-[var(--m-muted)] mt-1.5">{label}</p>
-    </Card>
-  );
-}
-
-function QuickAction({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
-  return (
-    <Card onClick={onClick} className="flex items-center gap-3 !py-3.5">
-      <span className="m-grad-accent w-9 h-9 rounded-[11px] flex items-center justify-center flex-shrink-0 text-white">
-        {icon}
-      </span>
-      <span className="text-[13.5px] font-semibold flex-1">{label}</span>
-      <ChevronRight className="w-4 h-4 text-[var(--m-faint)]" />
-    </Card>
+    <div className="relative flex-1">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full h-[42px] pl-3.5 pr-8 rounded-[13px] border text-[13.5px] font-semibold outline-none appearance-none"
+        style={{ background: "var(--m-card)", borderColor: "var(--m-card-border)", color: value ? "var(--m-text)" : "var(--m-muted)" }}
+      >
+        <option value="">{allLabel}</option>
+        {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--m-faint)] text-[10px]">▼</span>
+    </div>
   );
 }
 
 export default function MDashboard() {
-  const navigate = useNavigate();
-  const { data: me } = useMe();
-  const { data: stats, isLoading } = useDashboardStats();
-  const { data: peopleData } = usePeople({ pageSize: 200 });
+  const [zone, setZone] = useState("");
+  const [area, setArea] = useState("");
+  const { data, isLoading } = useDashboardOverview(zone, area);
+  const { data: zoneNames } = useDynamicZoneNames();
+  const { data: areas } = useDynamicAreas();
 
-  const role = me?.user?.role ?? "user";
-  const firstName = (me?.user?.name || me?.user?.email || "there").split(/[\s@]/)[0];
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const people: Person[] = peopleData?.people ?? [];
-
-  const byZone = useMemo(() => {
-    const map = new Map<string, { total: number; done: number }>();
-    for (const p of people) {
-      const z = p.zone || "Unassigned";
-      const cur = map.get(z) ?? { total: 0, done: 0 };
-      cur.total += 1;
-      if (p.checkedIn === "Yes") cur.done += 1;
-      map.set(z, cur);
-    }
-    return [...map.entries()].sort((a, b) => b[1].total - a[1].total).slice(0, 6);
-  }, [people]);
+  const counts = data?.counts;
+  const peopleTotal = data?.peopleTotal ?? 0;
+  const notCheckedIn = peopleTotal - (data?.checkedInTotal ?? 0);
+  const areaNames = (areas ?? []).map((a: any) => a.name as string);
 
   return (
     <div className="pt-2">
-      {/* Hero */}
-      <div className="m-grad-accent m-glow relative overflow-hidden rounded-[22px] p-5 mb-[14px]">
-        <div className="absolute -right-8 -top-10 w-36 h-36 rounded-full bg-white/15 blur-2xl pointer-events-none" />
-        <div className="absolute -left-6 -bottom-12 w-28 h-28 rounded-full bg-black/10 blur-2xl pointer-events-none" />
-        <p className="relative text-white/85 text-[13px] font-medium">{greeting}, {firstName}</p>
-        <h1 className="relative m-serif text-white text-[27px] font-extrabold leading-tight mt-0.5">Dashboard</h1>
-        <div className="relative mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 text-white text-[12px] font-semibold backdrop-blur-sm">
-          <span className="w-1.5 h-1.5 rounded-full bg-white" />
-          {ROLE_LABEL[role] ?? "User"}
-        </div>
+      <ScreenHeader title="Dashboard" subtitle="Group, teams & hotel assignments" />
+
+      {/* Filters */}
+      <div className="flex gap-2.5 mb-[14px]">
+        <Dropdown value={zone} onChange={setZone} allLabel="All Zones" options={zoneNames ?? []} />
+        <Dropdown value={area} onChange={setArea} allLabel="All Areas" options={areaNames} />
       </div>
 
-      {/* Stat grid */}
-      <div className="grid grid-cols-2 gap-[11px] m-stagger">
-        <StatCard icon={<Users className="w-[18px] h-[18px]" />} value={stats?.totalPeople} label="Registered" tone={TONES.indigo} loading={isLoading} />
-        <StatCard icon={<TrendingUp className="w-[18px] h-[18px]" />} value={stats?.acoPlayers} label="ACO players" tone={TONES.emerald} loading={isLoading} />
-        <StatCard icon={<UsersRound className="w-[18px] h-[18px]" />} value={stats?.totalTeams} label="Teams" tone={TONES.sky} loading={isLoading} />
-        <StatCard icon={<Hotel className="w-[18px] h-[18px]" />} value={stats?.totalHotels} label="Hotels" tone={TONES.amber} loading={isLoading} />
-      </div>
-
-      {/* Check-in by zone */}
-      <Card className="mt-[11px]">
-        <div className="flex items-center justify-between mb-3.5">
-          <p className="text-[13.5px] font-bold">Check-in by zone</p>
-          <span className="text-[11px] font-semibold text-[var(--m-faint)]">Live</span>
+      {/* Status */}
+      <Card className="!p-0 overflow-hidden">
+        <div className="flex items-center px-4 py-2.5 text-[10.5px] font-bold uppercase tracking-wide text-[var(--m-faint)]"
+          style={{ borderBottom: "1px solid var(--m-card-border)" }}>
+          <span className="flex-1">Status</span>
+          <span className="w-20 text-right">Count</span>
+          <span className="w-24 text-right">Checked in</span>
         </div>
-        {byZone.length === 0 ? (
-          <p className="text-[13px] text-[var(--m-muted)] py-2">No people registered yet.</p>
-        ) : (
-          <div className="space-y-3">
-            {byZone.map(([zone, { total, done }]) => {
-              const pct = total > 0 ? (done / total) * 100 : 0;
-              return (
-                <div key={zone}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[12.5px] font-medium text-[var(--m-muted)] truncate mr-2">{zone}</span>
-                    <span className="text-[12px] font-semibold tabular-nums text-[var(--m-faint)]">{done}/{total}</span>
-                  </div>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--m-track)" }}>
-                    <div className="m-bar-fill m-grad-accent h-full rounded-full" style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        {ROWS.map((r, i) => {
+          const c = counts?.[r.key] ?? { count: 0, checkedIn: 0 };
+          return (
+            <div key={r.key} className="flex items-center px-4 py-3"
+              style={i > 0 ? { borderTop: "1px solid var(--m-card-border)" } : undefined}>
+              <span className="flex-1 inline-flex items-center gap-2.5 text-[14.5px] font-semibold">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ background: r.dot }} /> {r.label}
+              </span>
+              <span className="w-20 text-right text-[13.5px] tabular-nums">
+                <span className="font-bold">{c.count}</span> <span className="text-[var(--m-faint)]">{pct(c.count, peopleTotal)}%</span>
+              </span>
+              <span className="w-24 text-right text-[13.5px] tabular-nums">
+                <span className="font-bold">{c.checkedIn}</span> <span className="text-[var(--m-faint)]">{pct(c.checkedIn, c.count)}%</span>
+              </span>
+            </div>
+          );
+        })}
+        <div className="px-4 py-3 text-[12.5px] flex flex-wrap items-center gap-x-2 gap-y-0.5"
+          style={{ borderTop: "1px solid var(--m-card-border)", background: "var(--m-inset)" }}>
+          <span className="text-[var(--m-muted)]">Checked In: <span className="font-bold text-[var(--m-text)]">{data?.checkedInTotal ?? 0}</span> / {peopleTotal}</span>
+          <span className="text-[var(--m-faint)]">·</span>
+          <span className="text-[var(--m-muted)]">Not Checked In: <span className="font-bold" style={{ color: "var(--m-rose-fg)" }}>{notCheckedIn}</span></span>
+        </div>
       </Card>
 
-      {/* Quick actions */}
-      <p className="text-[13.5px] font-bold mt-6 mb-2.5 px-0.5">Quick actions</p>
-      <div className="grid grid-cols-1 gap-[11px] m-stagger">
-        <QuickAction icon={<UserPlus className="w-[18px] h-[18px]" />} label="Register person" onClick={() => navigate("/registration")} />
-        <QuickAction icon={<ClipboardList className="w-[18px] h-[18px]" />} label="Assignments" onClick={() => navigate("/assignments")} />
-        <QuickAction icon={<Sparkles className="w-[18px] h-[18px]" />} label="Search Assistant" onClick={() => navigate("/search-assistant")} />
-        <QuickAction icon={<FileText className="w-[18px] h-[18px]" />} label="Final List" onClick={() => navigate("/final-list")} />
-      </div>
+      {/* Hotel Overview */}
+      <p className="text-[13.5px] font-bold mt-6 mb-2.5 px-0.5">Hotel Overview</p>
+      {isLoading ? <CardSkeletons count={3} height={84} />
+        : (data?.hotels ?? []).length === 0 ? (
+          <Card><div className="flex flex-col items-center text-center py-6">
+            <Hotel className="w-7 h-7 mb-2 text-[var(--m-faint)]" />
+            <p className="text-[13.5px] text-[var(--m-muted)]">No hotels yet</p>
+          </div></Card>
+        ) : (
+          <div className="space-y-[11px]">
+            {(data?.hotels ?? []).map((h) => (
+              <Card key={h.id}>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[15.5px] font-bold truncate">{h.name}</p>
+                  <span className="text-[12px] text-[var(--m-faint)] flex-shrink-0 tabular-nums">
+                    <span className="font-semibold text-[var(--m-muted)]">{h.remaining}</span>/{h.totalSlots} left
+                  </span>
+                </div>
+                <div className="mt-2.5">
+                  {h.zones.length === 0 ? (
+                    <span className="text-[12.5px] text-[var(--m-faint)]">No assignments yet</span>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {h.zones.map((z) => <Pill key={z.zone} tone="accent">{z.zone} — {z.slots}</Pill>)}
+                    </div>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
     </div>
   );
 }
