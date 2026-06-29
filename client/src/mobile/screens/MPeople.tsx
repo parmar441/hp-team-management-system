@@ -10,7 +10,7 @@ import { useDynamicZoneNames } from "../../hooks/useDynamicZones";
 import { useDynamicAreas } from "../../hooks/useDynamicAreas";
 import { useMe } from "../../hooks/useAuth";
 import { useDebounce } from "../../hooks/useDebounce";
-import { Avatar, Pill, ScreenHeader, IconButton, Sheet, EmptyState, Spinner, PrimaryButton, Label, TextInput, ChipGroup, useToast } from "../ui";
+import { Avatar, Pill, ScreenHeader, IconButton, Sheet, EmptyState, CardSkeletons, PrimaryButton, Label, TextInput, ChipGroup, useToast } from "../ui";
 
 const AGE_RANGES = ["0-6", "7-14", "15-45", "46-65", "65+"];
 const EMPTY_PERSON: Partial<Person> = {
@@ -175,20 +175,20 @@ export default function MPeople() {
 
       {/* List */}
       {isLoading ? (
-        <div className="flex justify-center pt-16"><Spinner className="w-6 h-6" /></div>
+        <CardSkeletons count={6} />
       ) : people.length === 0 ? (
         <EmptyState icon={<Search className="w-6 h-6" />} title="No people found"
           hint={activeCount || query ? "Try adjusting your filters" : "Register a person to get started"} />
       ) : (
-        <div className="space-y-[11px] pb-2">
+        <div className="space-y-[11px] pb-2 m-stagger">
           {people.map((p) => {
             const sel = selected.has(p._id);
             const checked = p.checkedIn === "Yes";
             return (
               <div key={p._id}
                 onClick={() => (selectMode ? toggleSelect(p._id) : setDetailPerson(p))}
-                className="rounded-[18px] border p-[15px] active:brightness-95"
-                style={{ background: "var(--m-card)", borderColor: sel ? "var(--m-accent-border)" : "var(--m-card-border)" }}>
+                className="m-sheen m-press rounded-[18px] border p-[15px]"
+                style={{ backgroundColor: "var(--m-card)", borderColor: sel ? "var(--m-accent-border)" : "var(--m-card-border)", boxShadow: sel ? "var(--m-glow)" : "var(--m-shadow-card)" }}>
                 <div className="flex items-center gap-3">
                   {selectMode && (
                     <span className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 border"

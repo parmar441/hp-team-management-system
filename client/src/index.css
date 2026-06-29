@@ -211,3 +211,56 @@ input, textarea, select, button {
 /* opacity-only: a lingering transform here would become the containing block
    for sheets/bulk bars (absolute/fixed), pinning them to the page bottom. */
 .m-screen-enter { animation: mScreenIn 0.22s ease-out both; }
+
+/* ════════════════════════════════════════════════════════════════
+   MOBILE UI POLISH — depth, motion, consistency (scoped to .m-app)
+   ════════════════════════════════════════════════════════════════ */
+.m-app {
+  --m-accent-2: #9b8cff;                 /* lighter accent for gradients   */
+  --m-shadow-card: 0 1px 1px rgba(0,0,0,0.25), 0 10px 26px -16px rgba(0,0,0,0.6);
+  --m-shadow-pop:  0 18px 50px -16px rgba(0,0,0,0.7);
+  --m-glow:        0 8px 22px -8px rgba(124,108,245,0.55);
+}
+
+/* subtle top sheen on dark cards for material depth */
+.m-sheen { background-image: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0) 42%); }
+
+/* gradient accent fill + glow (buttons, FAB, chips) */
+.m-grad-accent { background-image: linear-gradient(135deg, var(--m-accent) 0%, var(--m-accent-2) 100%); }
+.m-glow { box-shadow: var(--m-glow); }
+
+/* press feedback */
+.m-press { transition: transform .14s cubic-bezier(.2,.8,.2,1), filter .14s ease, box-shadow .14s ease; }
+.m-press:active { transform: scale(.97); filter: brightness(.97); }
+
+/* staggered list/section entrance */
+@keyframes mRise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.m-stagger > * { animation: mRise .42s cubic-bezier(.2,.8,.2,1) both; }
+.m-stagger > *:nth-child(1) { animation-delay: .02s; }
+.m-stagger > *:nth-child(2) { animation-delay: .06s; }
+.m-stagger > *:nth-child(3) { animation-delay: .10s; }
+.m-stagger > *:nth-child(4) { animation-delay: .14s; }
+.m-stagger > *:nth-child(5) { animation-delay: .18s; }
+.m-stagger > *:nth-child(6) { animation-delay: .22s; }
+.m-stagger > *:nth-child(7) { animation-delay: .26s; }
+.m-stagger > *:nth-child(8) { animation-delay: .30s; }
+.m-stagger > *:nth-child(n+9) { animation-delay: .34s; }
+
+/* shimmer skeletons */
+.m-skel { position: relative; overflow: hidden; background: var(--m-inset); border-radius: 12px; }
+.m-skel::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent);
+  animation: mShimmer 1.4s infinite;
+}
+@keyframes mShimmer { 100% { transform: translateX(100%); } }
+
+/* frosted translucent nav */
+.m-nav-blur {
+  background: color-mix(in oklch, var(--m-nav) 80%, transparent);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+}
+
+/* blurred scrim for sheets */
+.m-scrim-blur { backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }

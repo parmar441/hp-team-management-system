@@ -97,9 +97,12 @@ function isActive(to: string, pathname: string) {
 
 function NavButton({ active, label, icon, onClick }: { active: boolean; label: string; icon: React.ReactNode; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex flex-col items-center justify-center gap-1 flex-1 active:scale-95 transition-transform">
-      <span style={{ color: active ? "var(--m-accent)" : "var(--m-faint)" }}>{icon}</span>
-      <span className="text-[10.5px] font-semibold leading-none" style={{ color: active ? "var(--m-accent)" : "var(--m-faint)" }}>
+    <button onClick={onClick} className="flex flex-col items-center justify-center gap-1 flex-1 m-press pt-1">
+      <span className="flex items-center justify-center w-[52px] h-[30px] rounded-full transition-all duration-200"
+        style={{ background: active ? "var(--m-accent-soft)" : "transparent", color: active ? "var(--m-accent)" : "var(--m-faint)" }}>
+        {icon}
+      </span>
+      <span className="text-[10.5px] font-semibold leading-none transition-colors" style={{ color: active ? "var(--m-accent)" : "var(--m-faint)" }}>
         {label}
       </span>
     </button>
@@ -198,11 +201,10 @@ export default function MobileLayout() {
 
         {/* Bottom tab bar */}
         <nav
-          className="absolute bottom-0 left-0 right-0 z-40 flex items-stretch border-t"
+          className="m-nav-blur absolute bottom-0 left-0 right-0 z-40 flex items-stretch border-t"
           style={{
             height: "calc(80px + env(safe-area-inset-bottom,0px))",
             paddingBottom: "env(safe-area-inset-bottom,0px)",
-            background: "var(--m-nav)",
             borderColor: "var(--m-nav-border)",
           }}
         >

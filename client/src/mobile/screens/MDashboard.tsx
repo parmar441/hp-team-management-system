@@ -4,21 +4,31 @@ import { Users, TrendingUp, UsersRound, Hotel, UserPlus, ClipboardList, Sparkles
 import { useDashboardStats } from "../../hooks/useDashboard";
 import { usePeople, type Person } from "../../hooks/usePeople";
 import { useMe } from "../../hooks/useAuth";
-import { Card, Spinner } from "../ui";
+import { Card, Skeleton } from "../ui";
 
 const ROLE_LABEL: Record<string, string> = {
   admin: "Admin", zone_lead: "Zone Lead", area_lead: "Area Lead", hotel_person: "Hotel Person", user: "User",
 };
 
-function StatCard({ icon, value, label, loading }: { icon: React.ReactNode; value?: number; label: string; loading?: boolean }) {
+type Tone = { bg: string; fg: string };
+const TONES: Record<string, Tone> = {
+  indigo:  { bg: "var(--m-accent-soft)", fg: "var(--m-accent)" },
+  emerald: { bg: "var(--m-aco-bg)",      fg: "var(--m-aco-fg)" },
+  sky:     { bg: "var(--m-sky-bg)",      fg: "var(--m-sky-fg)" },
+  amber:   { bg: "var(--m-amber-bg)",    fg: "var(--m-amber-fg)" },
+};
+
+function StatCard({ icon, value, label, tone, loading }: {
+  icon: React.ReactNode; value?: number; label: string; tone: Tone; loading?: boolean;
+}) {
   return (
     <Card className="!p-[15px]">
       <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center mb-3"
-        style={{ background: "var(--m-accent-soft)", color: "var(--m-accent)" }}>
+        style={{ background: tone.bg, color: tone.fg }}>
         {icon}
       </div>
       {loading
-        ? <div className="h-7 w-12 rounded-lg animate-pulse mb-1" style={{ background: "var(--m-inset)" }} />
+        ? <Skeleton className="h-7 w-12 rounded-lg mb-1" />
         : <p className="m-serif text-[28px] font-extrabold leading-none tabular-nums">{value ?? 0}</p>}
       <p className="text-[12.5px] font-medium text-[var(--m-muted)] mt-1.5">{label}</p>
     </Card>
@@ -28,8 +38,7 @@ function StatCard({ icon, value, label, loading }: { icon: React.ReactNode; valu
 function QuickAction({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
     <Card onClick={onClick} className="flex items-center gap-3 !py-3.5">
-      <span className="w-9 h-9 rounded-[11px] flex items-center justify-center flex-shrink-0"
-        style={{ background: "var(--m-accent-soft)", color: "var(--m-accent)" }}>
+      <span className="m-grad-accent w-9 h-9 rounded-[11px] flex items-center justify-center flex-shrink-0 text-white">
         {icon}
       </span>
       <span className="text-[13.5px] font-semibold flex-1">{label}</span>
@@ -45,6 +54,9 @@ export default function MDashboard() {
   const { data: peopleData } = usePeople({ pageSize: 200 });
 
   const role = me?.user?.role ?? "user";
+  const firstName = (me?.user?.name || me?.user?.email || "there").split(/[\s@]/)[0];
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const people: Person[] = peopleData?.people ?? [];
 
   const byZone = useMemo(() => {
@@ -61,30 +73,32 @@ export default function MDashboard() {
 
   return (
     <div className="pt-2">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-5">
-        <div>
-          <p className="text-[13px] font-medium text-[var(--m-muted)]">Welcome back</p>
-          <h1 className="m-serif font-extrabold text-[28px] leading-none tracking-[-0.5px] mt-1">Dashboard</h1>
-        </div>
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold"
-          style={{ background: "var(--m-accent-soft)", color: "var(--m-accent)" }}>
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--m-accent)" }} />
+      {/* Hero */}
+      <div className="m-grad-accent m-glow relative overflow-hidden rounded-[22px] p-5 mb-[14px]">
+        <div className="absolute -right-8 -top-10 w-36 h-36 rounded-full bg-white/15 blur-2xl pointer-events-none" />
+        <div className="absolute -left-6 -bottom-12 w-28 h-28 rounded-full bg-black/10 blur-2xl pointer-events-none" />
+        <p className="relative text-white/85 text-[13px] font-medium">{greeting}, {firstName}</p>
+        <h1 className="relative m-serif text-white text-[27px] font-extrabold leading-tight mt-0.5">Dashboard</h1>
+        <div className="relative mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 text-white text-[12px] font-semibold backdrop-blur-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-white" />
           {ROLE_LABEL[role] ?? "User"}
-        </span>
+        </div>
       </div>
 
       {/* Stat grid */}
-      <div className="grid grid-cols-2 gap-[11px]">
-        <StatCard icon={<Users className="w-[18px] h-[18px]" />} value={stats?.totalPeople} label="Registered" loading={isLoading} />
-        <StatCard icon={<TrendingUp className="w-[18px] h-[18px]" />} value={stats?.acoPlayers} label="ACO players" loading={isLoading} />
-        <StatCard icon={<UsersRound className="w-[18px] h-[18px]" />} value={stats?.totalTeams} label="Teams" loading={isLoading} />
-        <StatCard icon={<Hotel className="w-[18px] h-[18px]" />} value={stats?.totalHotels} label="Hotels" loading={isLoading} />
+      <div className="grid grid-cols-2 gap-[11px] m-stagger">
+        <StatCard icon={<Users className="w-[18px] h-[18px]" />} value={stats?.totalPeople} label="Registered" tone={TONES.indigo} loading={isLoading} />
+        <StatCard icon={<TrendingUp className="w-[18px] h-[18px]" />} value={stats?.acoPlayers} label="ACO players" tone={TONES.emerald} loading={isLoading} />
+        <StatCard icon={<UsersRound className="w-[18px] h-[18px]" />} value={stats?.totalTeams} label="Teams" tone={TONES.sky} loading={isLoading} />
+        <StatCard icon={<Hotel className="w-[18px] h-[18px]" />} value={stats?.totalHotels} label="Hotels" tone={TONES.amber} loading={isLoading} />
       </div>
 
       {/* Check-in by zone */}
       <Card className="mt-[11px]">
-        <p className="text-[13.5px] font-bold mb-3.5">Check-in by zone</p>
+        <div className="flex items-center justify-between mb-3.5">
+          <p className="text-[13.5px] font-bold">Check-in by zone</p>
+          <span className="text-[11px] font-semibold text-[var(--m-faint)]">Live</span>
+        </div>
         {byZone.length === 0 ? (
           <p className="text-[13px] text-[var(--m-muted)] py-2">No people registered yet.</p>
         ) : (
@@ -98,7 +112,7 @@ export default function MDashboard() {
                     <span className="text-[12px] font-semibold tabular-nums text-[var(--m-faint)]">{done}/{total}</span>
                   </div>
                   <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--m-track)" }}>
-                    <div className="m-bar-fill h-full rounded-full" style={{ width: `${pct}%`, background: "var(--m-accent)" }} />
+                    <div className="m-bar-fill m-grad-accent h-full rounded-full" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );
@@ -109,16 +123,12 @@ export default function MDashboard() {
 
       {/* Quick actions */}
       <p className="text-[13.5px] font-bold mt-6 mb-2.5 px-0.5">Quick actions</p>
-      <div className="grid grid-cols-1 gap-[11px]">
+      <div className="grid grid-cols-1 gap-[11px] m-stagger">
         <QuickAction icon={<UserPlus className="w-[18px] h-[18px]" />} label="Register person" onClick={() => navigate("/registration")} />
         <QuickAction icon={<ClipboardList className="w-[18px] h-[18px]" />} label="Assignments" onClick={() => navigate("/assignments")} />
         <QuickAction icon={<Sparkles className="w-[18px] h-[18px]" />} label="Search Assistant" onClick={() => navigate("/search-assistant")} />
         <QuickAction icon={<FileText className="w-[18px] h-[18px]" />} label="Final List" onClick={() => navigate("/final-list")} />
       </div>
-
-      {isLoading && (
-        <div className="flex justify-center pt-6"><Spinner className="w-5 h-5" /></div>
-      )}
     </div>
   );
 }

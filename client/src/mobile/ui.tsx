@@ -28,7 +28,11 @@ export function Avatar({ name, size = 44, radius = 14, className }: {
   return (
     <div
       className={cn("flex items-center justify-center font-bold flex-shrink-0", className)}
-      style={{ ...avatarStyle(name), width: size, height: size, borderRadius: radius, fontSize: size * 0.34 }}
+      style={{
+        ...avatarStyle(name),
+        width: size, height: size, borderRadius: radius, fontSize: size * 0.34,
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14), inset 0 0 0 1px rgba(255,255,255,0.06)",
+      }}
     >
       {initials(name)}
     </div>
@@ -89,10 +93,13 @@ export function IconButton({ onClick, children, soft, "aria-label": ariaLabel }:
     <button
       aria-label={ariaLabel}
       onClick={onClick}
-      className="w-[42px] h-[42px] rounded-[13px] flex items-center justify-center active:scale-[0.96] transition-transform"
+      className={cn(
+        "w-[42px] h-[42px] rounded-[13px] flex items-center justify-center m-press",
+        !soft && "m-grad-accent m-glow",
+      )}
       style={soft
         ? { background: "var(--m-accent-soft)", color: "var(--m-accent)" }
-        : { background: "var(--m-accent)", color: "#fff" }}
+        : { color: "#fff" }}
     >
       {children}
     </button>
@@ -109,13 +116,14 @@ export function Card({ children, className, onClick, selected, style }: {
     <div
       onClick={onClick}
       className={cn(
-        "rounded-[18px] border p-[15px] transition-colors",
-        onClick && "active:brightness-95 cursor-pointer",
+        "m-sheen rounded-[18px] border p-[15px] transition-all",
+        onClick && "m-press cursor-pointer",
         className,
       )}
       style={{
-        background: "var(--m-card)",
+        backgroundColor: "var(--m-card)",
         borderColor: selected ? "var(--m-accent-border)" : "var(--m-card-border)",
+        boxShadow: selected ? "var(--m-glow)" : "var(--m-shadow-card)",
         ...style,
       }}
     >
@@ -146,6 +154,22 @@ export function Spinner({ className }: { className?: string }) {
   );
 }
 
+/* Shimmer skeleton block */
+export function Skeleton({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return <div className={cn("m-skel", className)} style={style} />;
+}
+
+/* A list of card-shaped skeletons for loading states */
+export function CardSkeletons({ count = 5, height = 92 }: { count?: number; height?: number }) {
+  return (
+    <div className="space-y-[11px]">
+      {Array.from({ length: count }).map((_, i) => (
+        <Skeleton key={i} className="rounded-[18px]" style={{ height }} />
+      ))}
+    </div>
+  );
+}
+
 /* ──────────────────────────────────────────────────────────────
    Form controls
    ────────────────────────────────────────────────────────────── */
@@ -158,8 +182,8 @@ export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
       {...props}
       style={{ ...inputStyle, ...props.style }}
       className={cn(
-        "w-full h-[46px] px-3.5 rounded-[13px] border text-[14.5px] outline-none placeholder:text-[var(--m-faint)]",
-        "focus:border-[var(--m-accent-border)]",
+        "w-full h-[46px] px-3.5 rounded-[13px] border text-[14.5px] outline-none transition-shadow placeholder:text-[var(--m-faint)]",
+        "focus:border-[var(--m-accent-border)] focus:shadow-[0_0_0_3px_var(--m-accent-soft)]",
         props.className,
       )}
     />
@@ -207,8 +231,7 @@ export function PrimaryButton({ children, onClick, disabled, type = "button" }: 
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className="w-full h-[54px] rounded-[15px] text-[15px] font-bold text-white transition-all active:scale-[0.99] disabled:opacity-50"
-      style={{ background: "var(--m-accent)" }}
+      className="m-grad-accent m-glow m-press w-full h-[54px] rounded-[15px] text-[15px] font-bold text-white disabled:opacity-50 disabled:shadow-none"
     >
       {children}
     </button>
@@ -234,10 +257,10 @@ export function Sheet({ open, onClose, title, children, footer }: {
   const host = (typeof document !== "undefined" && document.querySelector(".m-app")) || null;
   const content = (
     <div className="absolute inset-0 z-50 flex flex-col justify-end">
-      <div className="m-scrim absolute inset-0 bg-black/55" onClick={onClose} />
+      <div className="m-scrim m-scrim-blur absolute inset-0 bg-black/60" onClick={onClose} />
       <div
-        className="m-sheet-panel relative max-h-[88%] flex flex-col rounded-t-[26px] border-t"
-        style={{ background: "var(--m-sheet)", borderColor: "var(--m-card-border)" }}
+        className="m-sheet-panel m-sheen relative max-h-[88%] flex flex-col rounded-t-[26px] border-t"
+        style={{ backgroundColor: "var(--m-sheet)", borderColor: "var(--m-card-border)", boxShadow: "var(--m-shadow-pop)" }}
       >
         <div className="flex-shrink-0 pt-2.5 pb-1 flex justify-center">
           <span className="w-9 h-1 rounded-full" style={{ background: "var(--m-track)" }} />
