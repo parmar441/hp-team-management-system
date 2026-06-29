@@ -1,14 +1,29 @@
 import { Router, Request, Response } from "express";
-import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { User } from "../models/User.js";
 import { ZoneAssignment } from "../models/ZoneAssignment.js";
 import { AreaAssignment } from "../models/AreaAssignment.js";
-import { LeadCredential } from "../models/LeadCredential.js";
 import { requireAuth, signToken } from "../middleware/auth.js";
 
 const router = Router();
 
-// GET /api/auth/me — get current user with zone/area assignments
+const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
+const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
+
+function escapeRegex(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Base URL the browser uses to reach this app (prod = app domain, dev = vite origin). */
+function baseUrl(req: Request) {
+  return process.env.APP_BASE_URL || `${req.protocol}://${req.get("host")}`;
+}
+function redirectUri(req: Request) {
+  return `${baseUrl(req)}/api/auth/google/callback`;
+}
+
+// GET /api/auth/me — current user with zone/area assignments
 router.get("/me", async (req: Request, res: Response): Promise<void> => {
   const token = req.cookies?.session;
   if (!token) {
@@ -49,68 +64,114 @@ router.post("/logout", (_req: Request, res: Response): void => {
   res.json({ success: true });
 });
 
-// POST /api/auth/login — username/password for leads
-router.post("/login", async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { username, password } = req.body;
-    if (!username || !password) {
-      res.status(400).json({ error: "Username and password required" });
-      return;
-    }
+// ── Google OAuth (the only sign-in method) ──────────────────────────────────
 
-    const credential = await LeadCredential.findOne({ username }).populate("userId");
-    if (!credential) {
-      res.status(401).json({ error: "Invalid credentials" });
-      return;
-    }
-
-    const valid = await bcrypt.compare(password, credential.passwordHash);
-    if (!valid) {
-      res.status(401).json({ error: "Invalid credentials" });
-      return;
-    }
-
-    const user = credential.userId as any;
-    await User.findByIdAndUpdate(user._id, { lastSignedIn: new Date() });
-
-    const token = signToken({
-      id: user._id.toString(),
-      openId: user.openId,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    });
-
-    res.cookie("session", token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    res.json({ user });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+// GET /api/auth/google — start the OAuth consent flow
+router.get("/google", (req: Request, res: Response): void => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId || !process.env.GOOGLE_CLIENT_SECRET) {
+    res.redirect("/login?error=google_not_configured");
+    return;
   }
+  const state = crypto.randomBytes(16).toString("hex");
+  res.cookie("oauth_state", state, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 10 * 60 * 1000,
+  });
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri(req),
+    response_type: "code",
+    scope: "openid email profile",
+    access_type: "online",
+    prompt: "select_account",
+    include_granted_scopes: "true",
+    state,
+  });
+  res.redirect(`${GOOGLE_AUTH_URL}?${params.toString()}`);
 });
 
-// GET /api/auth/oauth/callback — OAuth callback
-router.get("/oauth/callback", async (req: Request, res: Response): Promise<void> => {
+// GET /api/auth/google/callback — exchange code, upsert user, set session
+router.get("/google/callback", async (req: Request, res: Response): Promise<void> => {
   try {
-    const { openId, name, email } = req.query as { openId: string; name: string; email: string };
-    if (!openId) {
-      res.status(400).json({ error: "Missing openId" });
+    const { code, state } = req.query as { code?: string; state?: string; error?: string };
+    if (req.query.error || !code) {
+      res.redirect("/login?error=google_failed");
+      return;
+    }
+    if (!state || state !== req.cookies?.oauth_state) {
+      res.redirect("/login?error=state_mismatch");
+      return;
+    }
+    res.clearCookie("oauth_state");
+
+    const clientId = process.env.GOOGLE_CLIENT_ID!;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
+
+    // Exchange authorization code for tokens
+    const tokenRes = await fetch(GOOGLE_TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri(req),
+        grant_type: "authorization_code",
+      }),
+    });
+    if (!tokenRes.ok) {
+      res.redirect("/login?error=token_exchange");
+      return;
+    }
+    const tokens = (await tokenRes.json()) as { access_token?: string };
+    if (!tokens.access_token) {
+      res.redirect("/login?error=no_access_token");
       return;
     }
 
-    let user = await User.findOne({ openId });
+    // Fetch the verified Google profile
+    const profileRes = await fetch(GOOGLE_USERINFO_URL, {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    });
+    if (!profileRes.ok) {
+      res.redirect("/login?error=userinfo");
+      return;
+    }
+    const profile = (await profileRes.json()) as {
+      sub: string; email?: string; name?: string; email_verified?: boolean;
+    };
+    if (!profile.sub) {
+      res.redirect("/login?error=no_profile");
+      return;
+    }
+
+    const googleOpenId = `google:${profile.sub}`;
+    const email = profile.email?.toLowerCase().trim();
+
+    // 1) Already linked to this Google account
+    let user = await User.findOne({ openId: googleOpenId });
+
+    // 2) Match an existing account by email → keep its role, link Google
+    if (!user && email) {
+      user = await User.findOne({ email: new RegExp(`^${escapeRegex(email)}$`, "i") });
+      if (user) {
+        user.openId = googleOpenId;
+        user.loginMethod = "google";
+        if (!user.name && profile.name) user.name = profile.name;
+      }
+    }
+
+    // 3) Brand-new user — first ever becomes admin
     if (!user) {
       const count = await User.countDocuments();
       user = await User.create({
-        openId,
-        name,
+        openId: googleOpenId,
+        name: profile.name,
         email,
-        loginMethod: "oauth",
+        loginMethod: "google",
         role: count === 0 ? "admin" : "user",
         lastSignedIn: new Date(),
       });
@@ -126,63 +187,16 @@ router.get("/oauth/callback", async (req: Request, res: Response): Promise<void>
       email: user.email ?? undefined,
       role: user.role,
     });
-
     res.cookie("session", token, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-
     res.redirect("/");
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Simple local login for development (name + email → auto-create user)
-router.post("/local-login", async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { name, email } = req.body as { name: string; email: string };
-    if (!name || !email) {
-      res.status(400).json({ error: "Name and email required" });
-      return;
-    }
-    const openId = `local:${email.toLowerCase().trim()}`;
-    let user = await User.findOne({ openId });
-    if (!user) {
-      const count = await User.countDocuments();
-      user = await User.create({
-        openId,
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
-        loginMethod: "local",
-        role: count === 0 ? "admin" : "user",
-        lastSignedIn: new Date(),
-      });
-    } else {
-      user.lastSignedIn = new Date();
-      await user.save();
-    }
-
-    const token = signToken({
-      id: user._id.toString(),
-      openId: user.openId,
-      name: user.name ?? undefined,
-      email: user.email ?? undefined,
-      role: user.role,
-    });
-
-    res.cookie("session", token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    res.json({ user });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    console.error("Google OAuth error:", err);
+    res.redirect("/login?error=oauth_error");
   }
 });
 

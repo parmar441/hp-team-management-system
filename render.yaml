@@ -18,3 +18,12 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      # Google OAuth (sign-in). Set these in the Render dashboard.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      # Public base URL of this service, e.g. https://hp-team-management-system.onrender.com
+      # Used to build the OAuth redirect URI. Must match an Authorized redirect URI in Google.
+      - key: APP_BASE_URL
+        sync: false

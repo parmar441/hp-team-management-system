@@ -1,27 +1,35 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useLogin } from "../hooks/useAuth";
-import { Eye, EyeOff, ArrowRight, AlertCircle, BedDouble } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertCircle, BedDouble } from "lucide-react";
+
+const ERROR_MESSAGES: Record<string, string> = {
+  google_not_configured: "Google sign-in isn't configured yet. Contact your administrator.",
+  google_failed: "Google sign-in was cancelled or failed. Please try again.",
+  state_mismatch: "Your sign-in session expired. Please try again.",
+  token_exchange: "Could not complete Google sign-in. Please try again.",
+  no_access_token: "Could not complete Google sign-in. Please try again.",
+  userinfo: "Could not read your Google profile. Please try again.",
+  no_profile: "Could not read your Google profile. Please try again.",
+  oauth_error: "Something went wrong during sign-in. Please try again.",
+};
+
+function GoogleIcon() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.7 4.1-5.5 4.1-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.9 2.9 14.7 2 12 2 6.9 2 2.8 6.1 2.8 11.2S6.9 20.4 12 20.4c5.3 0 8.8-3.7 8.8-9 0-.6-.06-1-.15-1.4H12z" />
+    </svg>
+  );
+}
 
 export default function LoginPage() {
-  const navigate = useNavigate();
-  const loginMutation = useLogin();
-
-  const [form, setForm] = useState({ username: "", password: "" });
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
-  const loading = loginMutation.isPending;
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("error");
+    if (code) setError(ERROR_MESSAGES[code] || "Sign-in failed. Please try again.");
+  }, []);
 
-  async function handleSubmit(e: React.SyntheticEvent) {
-    e.preventDefault();
-    setError("");
-    try {
-      await loginMutation.mutateAsync({ username: form.username, password: form.password });
-      navigate("/");
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "Invalid username or password.");
-    }
+  function signInWithGoogle() {
+    window.location.href = "/api/auth/google";
   }
 
   return (
@@ -44,7 +52,6 @@ export default function LoginPage() {
 
       {/* Content */}
       <div className="relative z-10 w-full max-w-[400px] px-5 py-12 flex flex-col items-center">
-
         {/* Brand mark */}
         <div className="flex flex-col items-center mb-10">
           <div className="relative mb-4">
@@ -64,78 +71,25 @@ export default function LoginPage() {
 
           <div className="px-8 pt-8 pb-9">
             <h2 className="text-[1.6rem] font-bold text-white mb-1">Sign in</h2>
-            <p className="text-slate-400 text-sm mb-8">Enter your credentials to continue</p>
+            <p className="text-slate-400 text-sm mb-8">Continue with your Google account</p>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Username */}
-              <div className="space-y-2">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Username
-                </label>
-                <input
-                  type="text"
-                  value={form.username}
-                  onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
-                  placeholder="Enter username"
-                  required
-                  autoComplete="username"
-                  className="w-full px-4 py-3.5 rounded-xl bg-white/[0.07] border border-white/[0.10] text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500/40 focus:bg-white/[0.10] transition-all"
-                />
+            {/* Error */}
+            {error && (
+              <div className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 mb-5">
+                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                <p className="text-sm text-red-300">{error}</p>
               </div>
+            )}
 
-              {/* Password */}
-              <div className="space-y-2">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={form.password}
-                    onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                    placeholder="Enter password"
-                    required
-                    autoComplete="current-password"
-                    className="w-full px-4 py-3.5 pr-12 rounded-xl bg-white/[0.07] border border-white/[0.10] text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500/40 focus:bg-white/[0.10] transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    tabIndex={-1}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Error */}
-              {error && (
-                <div className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                  <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-                  <p className="text-sm text-red-300">{error}</p>
-                </div>
-              )}
-
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full relative flex items-center justify-center gap-2.5 py-3.5 rounded-xl font-semibold text-sm text-white overflow-hidden group disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200 mt-2"
-                style={{ background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)" }}
-              >
-                {/* hover shine */}
-                <span className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-200 rounded-xl" />
-                {loading ? (
-                  <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                ) : (
-                  <>
-                    <span className="relative">Sign In</span>
-                    <ArrowRight className="w-4 h-4 relative group-hover:translate-x-0.5 transition-transform" />
-                  </>
-                )}
-              </button>
-            </form>
+            {/* Google sign-in */}
+            <button
+              type="button"
+              onClick={signInWithGoogle}
+              className="w-full flex items-center justify-center gap-3 py-3.5 rounded-xl font-semibold text-sm text-slate-800 bg-white hover:bg-slate-100 transition-colors duration-200 shadow-lg"
+            >
+              <GoogleIcon />
+              Continue with Google
+            </button>
           </div>
         </div>
 
