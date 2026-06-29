@@ -28,6 +28,10 @@ import searchAssistantRoutes from "./routes/searchAssistant.js";
 import hotelRoomsRoutes from "./routes/hotelRooms.js";
 
 const app = express();
+// Behind Render's TLS-terminating proxy, trust the first hop's X-Forwarded-*
+// so req.protocol reports "https" (needed to build correct OAuth redirect URIs).
+// A specific hop count (not `true`) keeps express-rate-limit happy.
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/hp-team-management";
 
