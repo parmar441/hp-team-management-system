@@ -37,6 +37,19 @@ export function downloadCSV(content: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+/** Parse CSV text (with a header row) into an array of row objects keyed by header. */
+export function parseCsvToObjects(text: string): Record<string, string>[] {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) return [];
+  const headers = parseCSVRow(lines[0]).map((h) => h.trim());
+  return lines.slice(1).map((line) => {
+    const vals = parseCSVRow(line);
+    const obj: Record<string, string> = {};
+    headers.forEach((h, i) => { if (h) obj[h] = (vals[i] ?? "").trim(); });
+    return obj;
+  });
+}
+
 export function parseCSVRow(row: string): string[] {
   const result: string[] = [];
   let current = "";

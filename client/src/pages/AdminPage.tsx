@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
-  useAdminUsers, useUpdateUserRole, useCreateUser, useResetUserPassword, useDeleteUser,
+  useAdminUsers, useUpdateUserRole, useBulkImportUsers, useCreateUser, useResetUserPassword, useDeleteUser,
   useZoneAssignments, useCreateZoneAssignment, useDeleteZoneAssignment,
   useAreaAssignments, useCreateAreaAssignment, useDeleteAreaAssignment,
   useAuditLog, useCreateCredential,
@@ -12,11 +12,17 @@ import { useDynamicZoneNames } from "../hooks/useDynamicZones";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { ConfirmDialog } from "../components/ui/confirm-dialog";
 import { useToast } from "../components/ui/toaster";
+import { parseCsvToObjects, downloadCSV } from "../lib/utils";
 import {
   Settings, Users, MapPin, ClipboardList, KeyRound, Trash2,
   ChevronLeft, ChevronRight, Hotel, RefreshCw, CheckCircle2, AlertCircle,
-  UserPlus, Eye, EyeOff, X,
+  UserPlus, Eye, EyeOff, X, Upload, Download,
 } from "lucide-react";
+
+const USER_TEMPLATE_CSV =
+  "name,email,role\n" +
+  "John Doe,john@example.com,zone_lead\n" +
+  "Jane Smith,jane@example.com,user";
 
 type AdminTab = "users" | "zones" | "areas" | "audit" | "credentials" | "hotel-persons";
 
@@ -81,9 +87,25 @@ function UsersTab() {
   const { data: users, isLoading } = useAdminUsers();
   const updateRole = useUpdateUserRole();
   const createUser = useCreateUser();
+  const bulkImport = useBulkImportUsers();
   const resetPassword = useResetUserPassword();
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const deleteUser = useDeleteUser();
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const rows = parseCsvToObjects(await file.text());
+      if (rows.length === 0) { toast.error("No rows found in the file"); return; }
+      const res = await bulkImport.mutateAsync(rows.map((r) => ({ name: r.name, email: r.email, role: r.role })));
+      toast.success(`Imported: ${res.created} created, ${res.updated} updated`);
+    } catch {
+      toast.error("Import failed. Check your CSV format.");
+    }
+    if (fileRef.current) fileRef.current.value = "";
+  }
 
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState({ name: "", email: "", role: "user", username: "", password: "" });
@@ -132,13 +154,29 @@ function UsersTab() {
           <h3 className="text-sm font-semibold text-gray-900">All Users</h3>
           <p className="text-xs text-gray-400 mt-0.5">{(users ?? []).length} total</p>
         </div>
-        <button
-          onClick={() => { setShowCreate((v) => !v); setShowCreatePw(false); }}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-4 py-2 text-sm font-semibold transition-colors"
-        >
-          <UserPlus className="w-4 h-4" />
-          Create User
-        </button>
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <button
+            onClick={() => downloadCSV(USER_TEMPLATE_CSV, "users-template.csv")}
+            className="flex items-center gap-2 border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 rounded-xl px-3 py-2 text-sm font-medium transition-colors"
+          >
+            <Download className="w-4 h-4" /> <span className="hidden sm:inline">Template</span>
+          </button>
+          <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleImport} />
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={bulkImport.isPending}
+            className="flex items-center gap-2 border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 rounded-xl px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            <Upload className="w-4 h-4" /> <span className="hidden sm:inline">{bulkImport.isPending ? "Importing…" : "Import CSV"}</span>
+          </button>
+          <button
+            onClick={() => { setShowCreate((v) => !v); setShowCreatePw(false); }}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-4 py-2 text-sm font-semibold transition-colors"
+          >
+            <UserPlus className="w-4 h-4" />
+            Create User
+          </button>
+        </div>
       </div>
 
       {/* Create User Form */}

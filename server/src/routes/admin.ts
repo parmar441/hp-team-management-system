@@ -55,6 +55,37 @@ router.post("/users", requireAdmin, async (req: Request, res: Response): Promise
   }
 });
 
+const VALID_ROLES = ["user", "admin", "zone_lead", "area_lead", "hotel_person"];
+function escapeRegex(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
+// POST /api/admin/users/bulk — import users with roles by email (upsert).
+// Imported users gain login on their first Google sign-in (email match keeps the role).
+router.post("/users/bulk", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { users } = req.body as { users: Array<{ name?: string; email?: string; role?: string }> };
+    if (!Array.isArray(users)) { res.status(400).json({ error: "users array required" }); return; }
+    let created = 0, updated = 0, skipped = 0;
+    for (const u of users) {
+      const email = (u.email ?? "").toLowerCase().trim();
+      if (!email) { skipped++; continue; }
+      const role = VALID_ROLES.includes(u.role ?? "") ? (u.role as string) : "user";
+      const existing = await User.findOne({ email: new RegExp(`^${escapeRegex(email)}$`, "i") });
+      if (existing) {
+        existing.role = role as any;
+        if (u.name) existing.name = u.name.trim();
+        await existing.save();
+        updated++;
+      } else {
+        await User.create({ openId: `pending:${email}`, name: u.name?.trim(), email, role, loginMethod: "pending" });
+        created++;
+      }
+    }
+    res.status(201).json({ created, updated, skipped });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // PATCH /api/admin/users/:id/role
 router.patch("/users/:id/role", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   try {

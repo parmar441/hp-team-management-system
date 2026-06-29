@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Hotel, Trash2 } from "lucide-react";
+import { Plus, Hotel, Trash2, Upload, Download } from "lucide-react";
 import { useTournaments, useCreateTournament, useDeleteTournament, type Tournament } from "../../hooks/useTournaments";
 import { useAssignments } from "../../hooks/useAssignments";
 import { useMe } from "../../hooks/useAuth";
+import { parseCsvToObjects, downloadCSV } from "../../lib/utils";
 import { ScreenHeader, IconButton, Pill, Sheet, Label, TextInput, ChipGroup, PrimaryButton, EmptyState, CardSkeletons, useToast } from "../ui";
 
 const STATUS: Record<Tournament["status"], { tone: "emerald" | "amber" | "rose"; label: string }> = {
@@ -11,6 +12,21 @@ const STATUS: Record<Tournament["status"], { tone: "emerald" | "amber" | "rose";
   upcoming: { tone: "amber", label: "Upcoming" },
   not_available: { tone: "rose", label: "Not available" },
 };
+const HOTEL_TEMPLATE_CSV =
+  "name,address,totalSlots,status\n" +
+  "Grand Plaza,123 Main St,8,upcoming\n" +
+  "Seaside Inn,45 Ocean Ave,6,available";
+const HOTEL_STATUSES = ["upcoming", "available", "not_available"];
+
+function HeaderIconBtn({ onClick, label, children }: { onClick: () => void; label: string; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick} aria-label={label}
+      className="w-[42px] h-[42px] rounded-[13px] flex items-center justify-center active:scale-95"
+      style={{ background: "var(--m-card)", border: "1px solid var(--m-card-border)" }}>
+      {children}
+    </button>
+  );
+}
 
 export default function MHotels() {
   const toast = useToast();
@@ -23,6 +39,24 @@ export default function MHotels() {
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", address: "", totalSlots: "8", status: "upcoming" as Tournament["status"] });
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const rows = parseCsvToObjects(await file.text());
+      if (rows.length === 0) { toast("No rows found in file"); return; }
+      let ok = 0;
+      for (const r of rows) {
+        if (!r.name?.trim()) continue;
+        const status = (HOTEL_STATUSES.includes(r.status) ? r.status : "upcoming") as Tournament["status"];
+        try { await createHotel.mutateAsync({ name: r.name.trim(), address: r.address || "", totalSlots: parseInt(r.totalSlots) || 8, status }); ok++; } catch { /* skip */ }
+      }
+      toast(`${ok} hotel${ok === 1 ? "" : "s"} imported`);
+    } catch { toast("Import failed — check the CSV"); }
+    if (fileRef.current) fileRef.current.value = "";
+  }
 
   const occupied = useMemo(() => {
     const m = new Map<string, number>();
@@ -46,7 +80,18 @@ export default function MHotels() {
   return (
     <div className="pt-2">
       <ScreenHeader title="Hotels" subtitle={`${list.length} venues`}
-        action={isAdmin && <IconButton onClick={() => setOpen(true)} aria-label="Add hotel"><Plus className="w-5 h-5" /></IconButton>} />
+        action={isAdmin && (
+          <>
+            <HeaderIconBtn onClick={() => downloadCSV(HOTEL_TEMPLATE_CSV, "hotels-template.csv")} label="Download template">
+              <Download className="w-[18px] h-[18px] text-[var(--m-text)]" />
+            </HeaderIconBtn>
+            <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleImport} />
+            <HeaderIconBtn onClick={() => fileRef.current?.click()} label="Import CSV">
+              <Upload className="w-[18px] h-[18px] text-[var(--m-text)]" />
+            </HeaderIconBtn>
+            <IconButton onClick={() => setOpen(true)} aria-label="Add hotel"><Plus className="w-5 h-5" /></IconButton>
+          </>
+        )} />
 
       {isLoading ? <CardSkeletons count={4} height={116} />
         : list.length === 0 ? <EmptyState icon={<Hotel className="w-6 h-6" />} title="No hotels yet" hint={isAdmin ? "Tap + to add a venue" : undefined} />

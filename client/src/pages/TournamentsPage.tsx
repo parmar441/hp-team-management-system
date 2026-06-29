@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   useTournaments, useCreateTournament, useDeleteTournament,
   useTournament, useAssignTeam, useUnassignTeam, useUpdateSlotRoom,
@@ -9,7 +9,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { ConfirmDialog } from "../components/ui/confirm-dialog";
 import { useToast } from "../components/ui/toaster";
-import { Hotel, Plus, Trash2, ChevronRight, DoorOpen, Edit2, Check, X, ArrowLeft } from "lucide-react";
+import { parseCsvToObjects, downloadCSV } from "../lib/utils";
+import { Hotel, Plus, Trash2, ChevronRight, DoorOpen, Edit2, Check, X, ArrowLeft, Upload, Download } from "lucide-react";
+
+const HOTEL_TEMPLATE_CSV =
+  "name,address,totalSlots,status\n" +
+  "Grand Plaza,123 Main St,8,upcoming\n" +
+  "Seaside Inn,45 Ocean Ave,6,available";
+const HOTEL_STATUSES = ["upcoming", "available", "not_available"];
 
 function SlotRow({ slot, tournamentId }: { slot: TournamentSlot; tournamentId: string }) {
   const toast = useToast();
@@ -201,6 +208,29 @@ export default function TournamentsPage() {
     name: string; address: string; totalSlots: string;
     status: "upcoming" | "not_available" | "available";
   }>({ name: "", address: "", totalSlots: "8", status: "upcoming" });
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const rows = parseCsvToObjects(await file.text());
+      if (rows.length === 0) { toast.error("No rows found in the file"); return; }
+      let ok = 0;
+      for (const r of rows) {
+        if (!r.name?.trim()) continue;
+        const status = (HOTEL_STATUSES.includes(r.status) ? r.status : "upcoming") as Tournament["status"];
+        try {
+          await createTournament.mutateAsync({ name: r.name.trim(), address: r.address || "", totalSlots: parseInt(r.totalSlots, 10) || 8, status });
+          ok++;
+        } catch { /* skip bad row */ }
+      }
+      toast.success(`${ok} hotel${ok === 1 ? "" : "s"} imported`);
+    } catch {
+      toast.error("Import failed. Check your CSV format.");
+    }
+    if (fileRef.current) fileRef.current.value = "";
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -234,12 +264,28 @@ export default function TournamentsPage() {
             <p className="text-sm text-gray-500">{tournaments?.length ?? 0} hotels registered</p>
           </div>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" /> Add Hotel
-        </button>
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <button
+            onClick={() => downloadCSV(HOTEL_TEMPLATE_CSV, "hotels-template.csv")}
+            className="inline-flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 text-sm font-medium transition-colors"
+          >
+            <Download className="w-4 h-4" /> <span className="hidden sm:inline">Template</span>
+          </button>
+          <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleImport} />
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={createTournament.isPending}
+            className="inline-flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            <Upload className="w-4 h-4" /> <span className="hidden sm:inline">Import CSV</span>
+          </button>
+          <button
+            onClick={() => setShowCreate(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" /> Add Hotel
+          </button>
+        </div>
       </div>
 
       {isLoading ? (

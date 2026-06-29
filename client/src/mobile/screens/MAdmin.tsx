@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
-import { Plus, Trash2, KeyRound, Settings, X, ChevronRight } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Plus, Trash2, KeyRound, Settings, X, ChevronRight, Upload, Download } from "lucide-react";
 import {
-  useAdminUsers, useUpdateUserRole,
+  useAdminUsers, useUpdateUserRole, useBulkImportUsers,
   useZoneAssignments, useCreateZoneAssignment, useDeleteZoneAssignment,
   useAreaAssignments, useCreateAreaAssignment, useDeleteAreaAssignment,
   useHotelPersonAssignments, useCreateHotelPersonCredential,
@@ -11,7 +11,13 @@ import {
 import { useDynamicZoneNames } from "../../hooks/useDynamicZones";
 import { useDynamicAreas, type DynamicArea } from "../../hooks/useDynamicAreas";
 import { useTournaments } from "../../hooks/useTournaments";
+import { parseCsvToObjects, downloadCSV } from "../../lib/utils";
 import { Avatar, Pill, ScreenHeader, Sheet, EmptyState, CardSkeletons, useToast } from "../ui";
+
+const USER_TEMPLATE_CSV =
+  "name,email,role\n" +
+  "John Doe,john@example.com,zone_lead\n" +
+  "Jane Smith,jane@example.com,user";
 
 const ROLES = [
   { value: "user", label: "User" },
@@ -83,10 +89,24 @@ function UsersTab({ users, isLoading, toast }: { users: any[]; isLoading: boolea
   const deleteZone = useDeleteZoneAssignment();
   const createArea = useCreateAreaAssignment();
   const deleteArea = useDeleteAreaAssignment();
+  const bulkImport = useBulkImportUsers();
+  const fileRef = useRef<HTMLInputElement>(null);
   const { data: zoneNames } = useDynamicZoneNames();
   const { data: areas } = useDynamicAreas();
 
   const [active, setActive] = useState<any | null>(null);
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const rows = parseCsvToObjects(await file.text());
+      if (rows.length === 0) { toast("No rows found in file"); return; }
+      const res = await bulkImport.mutateAsync(rows.map((r) => ({ name: r.name, email: r.email, role: r.role })));
+      toast(`${res.created} created · ${res.updated} updated`);
+    } catch { toast("Import failed — check the CSV"); }
+    if (fileRef.current) fileRef.current.value = "";
+  }
   const role = active?.role as string | undefined;
 
   const myZones = useMemo(() => ((zoneAssign ?? []) as any[]).filter((a) => uid(a) === active?._id), [zoneAssign, active]);
@@ -105,11 +125,24 @@ function UsersTab({ users, isLoading, toast }: { users: any[]; isLoading: boolea
     });
   }
 
-  if (isLoading) return <CardSkeletons count={6} height={64} />;
-  if (users.length === 0) return <EmptyState icon={<Settings className="w-6 h-6" />} title="No users yet" />;
-
   return (
     <>
+      <div className="flex gap-2.5 mb-3">
+        <button onClick={() => downloadCSV(USER_TEMPLATE_CSV, "users-template.csv")}
+          className="m-press h-[40px] px-3.5 rounded-[12px] border text-[12.5px] font-semibold flex items-center gap-1.5"
+          style={{ borderColor: "var(--m-card-border)", color: "var(--m-muted)" }}>
+          <Download className="w-4 h-4" /> Template
+        </button>
+        <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleImport} />
+        <button onClick={() => fileRef.current?.click()} disabled={bulkImport.isPending}
+          className="m-press flex-1 h-[40px] rounded-[12px] border border-dashed text-[12.5px] font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60"
+          style={{ borderColor: "var(--m-accent-border)", color: "var(--m-accent)" }}>
+          <Upload className="w-4 h-4" /> {bulkImport.isPending ? "Importing…" : "Import CSV"}
+        </button>
+      </div>
+      {isLoading ? <CardSkeletons count={6} height={64} />
+        : users.length === 0 ? <EmptyState icon={<Settings className="w-6 h-6" />} title="No users yet" />
+        : (
       <div className="space-y-2">
         {users.map((u) => (
           <button key={u._id} onClick={() => setActive(u)}
@@ -125,6 +158,7 @@ function UsersTab({ users, isLoading, toast }: { users: any[]; isLoading: boolea
           </button>
         ))}
       </div>
+        )}
 
       {/* Role + assignment sheet */}
       <Sheet open={!!active} onClose={() => setActive(null)}

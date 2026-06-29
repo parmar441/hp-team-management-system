@@ -17,6 +17,15 @@ export function useUpdateUserRole() {
   });
 }
 
+export function useBulkImportUsers() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (users: { name?: string; email?: string; role?: string }[]) =>
+      api.post("/admin/users/bulk", { users }).then((r) => r.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin"] }),
+  });
+}
+
 export function useCreateUser() {
   const queryClient = useQueryClient();
   return useMutation({
