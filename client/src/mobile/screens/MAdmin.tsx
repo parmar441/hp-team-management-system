@@ -1,21 +1,207 @@
 import { useMemo, useState } from "react";
-import { Plus, Trash2, KeyRound, Settings, X } from "lucide-react";
+import { Plus, Trash2, KeyRound, Settings, X, ChevronRight } from "lucide-react";
 import {
-  useAdminUsers, useHotelPersonAssignments, useCreateHotelPersonCredential,
+  useAdminUsers, useUpdateUserRole,
+  useZoneAssignments, useCreateZoneAssignment, useDeleteZoneAssignment,
+  useAreaAssignments, useCreateAreaAssignment, useDeleteAreaAssignment,
+  useHotelPersonAssignments, useCreateHotelPersonCredential,
   useRegenerateHotelPersonPassword, useDeleteHotelPersonCredential,
   useCreateHotelPersonAssignment, useDeleteHotelPersonAssignment,
 } from "../../hooks/useAdmin";
+import { useDynamicZoneNames } from "../../hooks/useDynamicZones";
+import { useDynamicAreas, type DynamicArea } from "../../hooks/useDynamicAreas";
 import { useTournaments } from "../../hooks/useTournaments";
-import { ScreenHeader, Sheet, EmptyState, Spinner, useToast } from "../ui";
+import { Avatar, Pill, ScreenHeader, Sheet, EmptyState, CardSkeletons, useToast } from "../ui";
+
+const ROLES = [
+  { value: "user", label: "User" },
+  { value: "admin", label: "Admin" },
+  { value: "zone_lead", label: "Zone Lead" },
+  { value: "area_lead", label: "Area Lead" },
+  { value: "hotel_person", label: "Hotel Person" },
+];
+const roleLabel = (r: string) => ROLES.find((x) => x.value === r)?.label ?? r;
 
 function rand(len: number) {
   const chars = "abcdefghjkmnpqrstuvwxyz23456789";
   return Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
 }
+function uid(a: any) { return a?.userId?._id ?? a?.userId; }
+
+/** Inline "add" dropdown that fires once on select then resets. */
+function AddSelect({ label, options, onPick }: {
+  label: string; options: { value: string; label: string }[]; onPick: (v: string) => void;
+}) {
+  return (
+    <select
+      value=""
+      onChange={(e) => { if (e.target.value) onPick(e.target.value); e.currentTarget.value = ""; }}
+      className="h-[34px] pl-3 pr-7 rounded-[10px] border border-dashed text-[12.5px] font-semibold outline-none appearance-none"
+      style={{ background: "transparent", borderColor: "var(--m-accent-border)", color: "var(--m-accent)" }}
+    >
+      <option value="">{label}</option>
+      {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  );
+}
 
 export default function MAdmin() {
   const toast = useToast();
+  const [tab, setTab] = useState<"users" | "hotels">("users");
   const { data: users, isLoading } = useAdminUsers();
+
+  return (
+    <div className="pt-2">
+      <ScreenHeader title="Admin Panel" subtitle="Manage users, roles & accounts" />
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-4">
+        {(["users", "hotels"] as const).map((t) => (
+          <button key={t} onClick={() => setTab(t)}
+            className="flex-1 h-[40px] rounded-[12px] text-[13.5px] font-bold transition-colors"
+            style={tab === t
+              ? { background: "var(--m-accent-soft)", color: "var(--m-accent)", border: "1px solid var(--m-accent-border)" }
+              : { background: "var(--m-card)", color: "var(--m-muted)", border: "1px solid var(--m-card-border)" }}>
+            {t === "users" ? "Users & Roles" : "Hotel Persons"}
+          </button>
+        ))}
+      </div>
+
+      {tab === "users"
+        ? <UsersTab users={(users ?? []) as any[]} isLoading={isLoading} toast={toast} />
+        : <HotelPersonsTab users={(users ?? []) as any[]} isLoading={isLoading} toast={toast} />}
+    </div>
+  );
+}
+
+/* ── Users & roles ─────────────────────────────────────────── */
+function UsersTab({ users, isLoading, toast }: { users: any[]; isLoading: boolean; toast: (m: string) => void }) {
+  const updateRole = useUpdateUserRole();
+  const { data: zoneAssign } = useZoneAssignments();
+  const { data: areaAssign } = useAreaAssignments();
+  const createZone = useCreateZoneAssignment();
+  const deleteZone = useDeleteZoneAssignment();
+  const createArea = useCreateAreaAssignment();
+  const deleteArea = useDeleteAreaAssignment();
+  const { data: zoneNames } = useDynamicZoneNames();
+  const { data: areas } = useDynamicAreas();
+
+  const [active, setActive] = useState<any | null>(null);
+  const role = active?.role as string | undefined;
+
+  const myZones = useMemo(() => ((zoneAssign ?? []) as any[]).filter((a) => uid(a) === active?._id), [zoneAssign, active]);
+  const myAreas = useMemo(() => ((areaAssign ?? []) as any[]).filter((a) => uid(a) === active?._id), [areaAssign, active]);
+
+  const assignedZoneNames = new Set(myZones.map((a) => a.zone));
+  const zoneOpts = (zoneNames ?? []).filter((z: string) => !assignedZoneNames.has(z)).map((z: string) => ({ value: z, label: z }));
+  const areaOpts = ((areas ?? []) as DynamicArea[]).map((a) => ({ value: a._id, label: a.name }));
+
+  function pickArea(areaId: string) {
+    const a = ((areas ?? []) as DynamicArea[]).find((x) => x._id === areaId);
+    if (!a || !active) return;
+    const zone = typeof a.zoneId === "object" ? a.zoneId?.name ?? "" : "";
+    createArea.mutate({ userId: active._id, zone, area: a.name }, {
+      onSuccess: () => toast("Area assigned"), onError: () => toast("Already assigned"),
+    });
+  }
+
+  if (isLoading) return <CardSkeletons count={6} height={64} />;
+  if (users.length === 0) return <EmptyState icon={<Settings className="w-6 h-6" />} title="No users yet" />;
+
+  return (
+    <>
+      <div className="space-y-2">
+        {users.map((u) => (
+          <button key={u._id} onClick={() => setActive(u)}
+            className="m-sheen m-press w-full flex items-center gap-3 rounded-[14px] border p-3 text-left"
+            style={{ backgroundColor: "var(--m-card)", borderColor: "var(--m-card-border)", boxShadow: "var(--m-shadow-card)" }}>
+            <Avatar name={u.name || u.email || u.credentialUsername || "U"} size={38} radius={11} />
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-semibold truncate">{u.name || u.credentialUsername || u.email || "User"}</p>
+              <p className="text-[12px] text-[var(--m-muted)] truncate">{u.email || u.openId}</p>
+            </div>
+            <Pill tone={u.role === "admin" ? "accent" : u.role === "user" ? "neutral" : "sky"}>{roleLabel(u.role)}</Pill>
+            <ChevronRight className="w-4 h-4 text-[var(--m-faint)] flex-shrink-0" />
+          </button>
+        ))}
+      </div>
+
+      {/* Role + assignment sheet */}
+      <Sheet open={!!active} onClose={() => setActive(null)}
+        title={active && (
+          <div className="flex items-center gap-3">
+            <Avatar name={active.name || active.email || "U"} size={36} />
+            <div className="min-w-0"><p className="text-[15px] font-bold leading-tight truncate">{active.name || active.credentialUsername || "User"}</p>
+              <p className="text-[12px] text-[var(--m-muted)] truncate">{active.email || active.openId}</p></div>
+          </div>
+        )}>
+        {active && (
+          <div className="space-y-5 pb-2">
+            <div>
+              <p className="text-[12px] font-semibold text-[var(--m-muted)] mb-2">Role</p>
+              <div className="flex flex-wrap gap-2">
+                {ROLES.map((r) => {
+                  const on = role === r.value;
+                  return (
+                    <button key={r.value}
+                      onClick={() => updateRole.mutate({ id: active._id, role: r.value }, {
+                        onSuccess: () => { setActive({ ...active, role: r.value }); toast(`Role set to ${r.label}`); },
+                        onError: () => toast("Failed to update role"),
+                      })}
+                      className="px-3.5 py-2 rounded-[11px] text-[13px] font-semibold border transition-colors"
+                      style={on
+                        ? { background: "var(--m-accent-soft)", color: "var(--m-accent)", borderColor: "var(--m-accent-border)" }
+                        : { background: "var(--m-inset)", color: "var(--m-muted)", borderColor: "transparent" }}>
+                      {r.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {role === "zone_lead" && (
+              <div>
+                <p className="text-[12px] font-semibold text-[var(--m-muted)] mb-2">Assigned zones</p>
+                <div className="flex flex-wrap gap-2 items-center">
+                  {myZones.map((a) => (
+                    <span key={a._id} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[10px] text-[12.5px] font-semibold" style={{ background: "var(--m-inset)", color: "var(--m-text)" }}>
+                      {a.zone}
+                      <button onClick={() => deleteZone.mutate(a._id, { onSuccess: () => toast("Zone removed") })}><X className="w-3 h-3 text-[var(--m-faint)]" /></button>
+                    </span>
+                  ))}
+                  {zoneOpts.length > 0 && (
+                    <AddSelect label="+ Add zone…" options={zoneOpts}
+                      onPick={(z) => createZone.mutate({ userId: active._id, zone: z }, { onSuccess: () => toast("Zone assigned"), onError: () => toast("Already assigned") })} />
+                  )}
+                </div>
+                {myZones.length === 0 && <p className="text-[12px] text-[var(--m-faint)] mt-1.5">No zones yet — this lead sees nothing until assigned.</p>}
+              </div>
+            )}
+
+            {role === "area_lead" && (
+              <div>
+                <p className="text-[12px] font-semibold text-[var(--m-muted)] mb-2">Assigned areas</p>
+                <div className="flex flex-wrap gap-2 items-center">
+                  {myAreas.map((a) => (
+                    <span key={a._id} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[10px] text-[12.5px] font-semibold" style={{ background: "var(--m-inset)", color: "var(--m-text)" }}>
+                      {a.zone} · {a.area}
+                      <button onClick={() => deleteArea.mutate(a._id, { onSuccess: () => toast("Area removed") })}><X className="w-3 h-3 text-[var(--m-faint)]" /></button>
+                    </span>
+                  ))}
+                  {areaOpts.length > 0 && <AddSelect label="+ Add area…" options={areaOpts} onPick={pickArea} />}
+                </div>
+                {myAreas.length === 0 && <p className="text-[12px] text-[var(--m-faint)] mt-1.5">No areas yet — this lead sees nothing until assigned.</p>}
+              </div>
+            )}
+          </div>
+        )}
+      </Sheet>
+    </>
+  );
+}
+
+/* ── Hotel persons ─────────────────────────────────────────── */
+function HotelPersonsTab({ users, isLoading, toast }: { users: any[]; isLoading: boolean; toast: (m: string) => void }) {
   const { data: assignments } = useHotelPersonAssignments();
   const { data: hotels } = useTournaments();
   const createCred = useCreateHotelPersonCredential();
@@ -23,53 +209,41 @@ export default function MAdmin() {
   const deleteCred = useDeleteHotelPersonCredential();
   const assignHotel = useCreateHotelPersonAssignment();
   const removeAssign = useDeleteHotelPersonAssignment();
-
   const [assignFor, setAssignFor] = useState<string | null>(null);
 
-  const accounts = useMemo(() => ((users ?? []) as any[]).filter((u) => u.role === "hotel_person"), [users]);
+  const accounts = useMemo(() => users.filter((u) => u.role === "hotel_person"), [users]);
   const byUser = useMemo(() => {
     const m = new Map<string, any[]>();
-    for (const a of (assignments ?? []) as any[]) {
-      const uid = a.userId?._id ?? a.userId;
-      if (!uid) continue;
-      m.set(uid, [...(m.get(uid) ?? []), a]);
-    }
+    for (const a of (assignments ?? []) as any[]) { const u = uid(a); if (u) m.set(u, [...(m.get(u) ?? []), a]); }
     return m;
   }, [assignments]);
 
   function generate() {
     const username = `hotel_${rand(4)}`;
     const password = rand(8);
-    createCred.mutate({ username, password }, {
-      onSuccess: () => toast(`Created ${username} · pw: ${password}`),
-      onError: () => toast("Failed to create account"),
-    });
+    createCred.mutate({ username, password }, { onSuccess: () => toast(`Created ${username} · pw: ${password}`), onError: () => toast("Failed to create account") });
   }
 
   return (
-    <div className="pt-2">
-      <ScreenHeader title="Admin Panel" subtitle="Manage hotel person accounts" />
-
+    <>
       <div className="flex items-center justify-between mb-3 px-0.5">
         <p className="text-[13.5px] font-bold">Hotel Persons</p>
         <button onClick={generate} disabled={createCred.isPending}
-          className="inline-flex items-center gap-1.5 h-[36px] px-3.5 rounded-full text-[12.5px] font-bold"
-          style={{ background: "var(--m-accent)", color: "#fff" }}>
+          className="m-grad-accent m-glow inline-flex items-center gap-1.5 h-[36px] px-3.5 rounded-full text-[12.5px] font-bold text-white">
           <Plus className="w-4 h-4" /> Generate
         </button>
       </div>
 
-      {isLoading ? <div className="flex justify-center pt-16"><Spinner className="w-6 h-6" /></div>
+      {isLoading ? <CardSkeletons count={3} height={120} />
         : accounts.length === 0 ? <EmptyState icon={<Settings className="w-6 h-6" />} title="No hotel persons" hint="Tap Generate to create one" />
         : (
           <div className="space-y-[11px]">
             {accounts.map((u) => {
               const hotelsFor = byUser.get(u._id) ?? [];
               return (
-                <div key={u._id} className="rounded-[18px] border p-[15px]" style={{ background: "var(--m-card)", borderColor: "var(--m-card-border)" }}>
+                <div key={u._id} className="m-sheen rounded-[18px] border p-[15px]" style={{ backgroundColor: "var(--m-card)", borderColor: "var(--m-card-border)", boxShadow: "var(--m-shadow-card)" }}>
                   <div className="flex items-center gap-3">
-                    <span className="w-[42px] h-[42px] rounded-[12px] flex items-center justify-center font-bold text-[15px]"
-                      style={{ background: "var(--m-accent-soft)", color: "var(--m-accent)" }}>
+                    <span className="w-[42px] h-[42px] rounded-[12px] flex items-center justify-center font-bold text-[15px]" style={{ background: "var(--m-accent-soft)", color: "var(--m-accent)" }}>
                       {(u.credentialUsername || u.name || "H").slice(0, 2).toUpperCase()}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -77,7 +251,6 @@ export default function MAdmin() {
                       <p className="text-[12px] text-[var(--m-muted)]">Hotel person account</p>
                     </div>
                   </div>
-
                   <div className="flex flex-wrap gap-2 mt-3">
                     {hotelsFor.map((a) => (
                       <span key={a._id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-semibold" style={{ background: "var(--m-inset)", color: "var(--m-muted)" }}>
@@ -85,12 +258,10 @@ export default function MAdmin() {
                         <button onClick={() => removeAssign.mutate(a._id, { onSuccess: () => toast("Hotel removed") })}><X className="w-3 h-3" /></button>
                       </span>
                     ))}
-                    <button onClick={() => setAssignFor(u._id)} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[12px] font-semibold border border-dashed"
-                      style={{ borderColor: "var(--m-card-border)", color: "var(--m-accent)" }}>
+                    <button onClick={() => setAssignFor(u._id)} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[12px] font-semibold border border-dashed" style={{ borderColor: "var(--m-card-border)", color: "var(--m-accent)" }}>
                       <Plus className="w-3 h-3" /> Hotel
                     </button>
                   </div>
-
                   <div className="flex gap-2.5 mt-3">
                     <button onClick={() => { const pw = rand(8); u.credentialId && regenPw.mutate({ id: u.credentialId, password: pw }, { onSuccess: () => toast(`New pw: ${pw}`) }); }}
                       className="flex-1 inline-flex items-center justify-center gap-1.5 h-[44px] rounded-[13px] text-[13px] font-semibold" style={{ background: "var(--m-inset)", color: "var(--m-text)" }}>
@@ -118,6 +289,6 @@ export default function MAdmin() {
             ))}
         </div>
       </Sheet>
-    </div>
+    </>
   );
 }

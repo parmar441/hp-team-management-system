@@ -2,8 +2,13 @@ import { useRef, useState } from "react";
 import { useCreatePerson, useBulkImportPeople, usePeople, type Person } from "../hooks/usePeople";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { useToast } from "../components/ui/toaster";
-import { parseCSVRow } from "../lib/utils";
-import { UserPlus, CheckCircle, Upload, Users } from "lucide-react";
+import { parseCSVRow, downloadCSV } from "../lib/utils";
+import { UserPlus, CheckCircle, Upload, Download, Users } from "lucide-react";
+
+const TEMPLATE_CSV =
+  "firstName,lastName,email,phone,gender,mandal,country,ageRange,acoNeeded,city,state,memberId,familyId,category\n" +
+  "Aarav,Patel,aarav@example.com,5550100,M,EDISON,us,15-45,Yes,Edison,New Jersey,M001,F100,\n" +
+  "Priya,Shah,,,F,JERSEY_CITY,us,15-45,No,Jersey City,New Jersey,,,";
 
 const EMPTY: Partial<Person> = {
   firstName: "", lastName: "", email: "", phone: "", city: "", state: "", country: "",
@@ -95,13 +100,21 @@ export default function RegistrationPage() {
           <p className="text-xs text-gray-500 mt-0.5">Upload a CSV with a header row (firstName, lastName, gender, mandal, country, ageRange, acoNeeded…). Each row is registered and auto-classified.</p>
         </div>
         <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleFile} />
-        <button
-          onClick={() => fileRef.current?.click()}
-          disabled={bulkImport.isPending}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors disabled:opacity-50 flex-shrink-0"
-        >
-          <Upload className="w-4 h-4" /> {bulkImport.isPending ? "Importing…" : "Choose CSV"}
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => downloadCSV(TEMPLATE_CSV, "registration-template.csv")}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 text-sm font-medium transition-colors"
+          >
+            <Download className="w-4 h-4" /> Template
+          </button>
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={bulkImport.isPending}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors disabled:opacity-50"
+          >
+            <Upload className="w-4 h-4" /> {bulkImport.isPending ? "Importing…" : "Choose CSV"}
+          </button>
+        </div>
       </div>
 
       {/* Single registration form */}

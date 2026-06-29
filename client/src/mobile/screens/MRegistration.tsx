@@ -1,8 +1,13 @@
 import { useRef, useState } from "react";
-import { Upload, Users } from "lucide-react";
+import { Upload, Download, Users } from "lucide-react";
 import { useCreatePerson, useBulkImportPeople, usePeople, type Person } from "../../hooks/usePeople";
-import { parseCSVRow } from "../../lib/utils";
+import { parseCSVRow, downloadCSV } from "../../lib/utils";
 import { Avatar, Pill, ScreenHeader, Label, TextInput, ChipGroup, PrimaryButton, Card, CardSkeletons, EmptyState, useToast } from "../ui";
+
+const TEMPLATE_CSV =
+  "firstName,lastName,email,phone,gender,mandal,country,ageRange,acoNeeded,city,state,memberId,familyId,category\n" +
+  "Aarav,Patel,aarav@example.com,5550100,M,EDISON,us,15-45,Yes,Edison,New Jersey,M001,F100,\n" +
+  "Priya,Shah,,,F,JERSEY_CITY,us,15-45,No,Jersey City,New Jersey,,,";
 
 const EMPTY: Partial<Person> = {
   firstName: "", lastName: "", email: "", phone: "", familyId: "", city: "", state: "",
@@ -79,11 +84,18 @@ export default function MRegistration() {
           </div>
         </div>
         <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleFile} />
-        <button onClick={() => fileRef.current?.click()} disabled={bulkImport.isPending}
-          className="m-press mt-3 w-full h-[44px] rounded-[12px] border border-dashed text-[13.5px] font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60"
-          style={{ borderColor: "var(--m-accent-border)", color: "var(--m-accent)" }}>
-          <Upload className="w-4 h-4" /> {bulkImport.isPending ? "Importing…" : "Choose CSV file"}
-        </button>
+        <div className="flex gap-2.5 mt-3">
+          <button onClick={() => downloadCSV(TEMPLATE_CSV, "registration-template.csv")}
+            className="m-press h-[44px] px-4 rounded-[12px] border text-[13px] font-semibold flex items-center justify-center gap-1.5 flex-shrink-0"
+            style={{ borderColor: "var(--m-card-border)", color: "var(--m-muted)" }}>
+            <Download className="w-4 h-4" /> Template
+          </button>
+          <button onClick={() => fileRef.current?.click()} disabled={bulkImport.isPending}
+            className="m-press flex-1 h-[44px] rounded-[12px] border border-dashed text-[13.5px] font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60"
+            style={{ borderColor: "var(--m-accent-border)", color: "var(--m-accent)" }}>
+            <Upload className="w-4 h-4" /> {bulkImport.isPending ? "Importing…" : "Choose CSV"}
+          </button>
+        </div>
       </Card>
 
       {/* Single registration */}
