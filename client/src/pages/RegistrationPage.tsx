@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
 import { useCreatePerson, useBulkImportPeople, usePeople, type Person } from "../hooks/usePeople";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { useToast } from "../components/ui/toaster";
 import { parseCSVRow, downloadCSV } from "../lib/utils";
-import { UserPlus, CheckCircle, Upload, Download, Users } from "lucide-react";
+import { UserPlus, CheckCircle, Upload, Download, Users, Plus } from "lucide-react";
 
 const TEMPLATE_CSV =
   "firstName,lastName,email,phone,gender,mandal,country,ageRange,acoNeeded,city,state,memberId,familyId,category\n" +
@@ -34,6 +35,7 @@ export default function RegistrationPage() {
   const toast = useToast();
   const [form, setForm] = useState(EMPTY);
   const [success, setSuccess] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const createPerson = useCreatePerson();
   const bulkImport = useBulkImportPeople();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -51,6 +53,7 @@ export default function RegistrationPage() {
       await createPerson.mutateAsync(form);
       setSuccess(true);
       setForm(EMPTY);
+      setShowForm(false);
       setTimeout(() => setSuccess(false), 3000);
     } catch {
       toast.error("Failed to register person");
@@ -73,14 +76,22 @@ export default function RegistrationPage() {
 
   return (
     <div className="p-6 lg:p-8 space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600">
-          <UserPlus className="w-6 h-6" />
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex-shrink-0">
+            <UserPlus className="w-6 h-6" />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-gray-900">Registration</h1>
+            <p className="text-sm text-gray-500">Add members one at a time or import in bulk. Zone and area are assigned automatically.</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Registration</h1>
-          <p className="text-sm text-gray-500">Add members one at a time or import in bulk. Zone and area are assigned automatically.</p>
-        </div>
+        <button
+          onClick={() => { setForm(EMPTY); setShowForm(true); }}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors shadow-sm flex-shrink-0"
+        >
+          <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Add member</span><span className="sm:hidden">Add</span>
+        </button>
       </div>
 
       {success && (
@@ -117,13 +128,11 @@ export default function RegistrationPage() {
         </div>
       </div>
 
-      {/* Single registration form */}
-      <div className="rounded-2xl border border-gray-100 shadow-sm bg-white">
-        <div className="px-6 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">Add one member</h2>
-        </div>
-        <div className="px-6 py-6">
-          <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Add member dialog */}
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader><DialogTitle className="text-lg font-bold">Add member</DialogTitle></DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-5 pt-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-gray-700">First Name *</label>
@@ -194,9 +203,9 @@ export default function RegistrationPage() {
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-2">
-              <button type="button" onClick={() => setForm(EMPTY)}
+              <button type="button" onClick={() => setShowForm(false)}
                 className="px-4 py-2.5 text-sm font-medium border border-gray-200 bg-white rounded-xl text-gray-700 hover:bg-gray-50 transition-colors">
-                Reset
+                Cancel
               </button>
               <button type="submit" disabled={createPerson.isPending}
                 className="px-5 py-2.5 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
@@ -204,8 +213,8 @@ export default function RegistrationPage() {
               </button>
             </div>
           </form>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Registered members list */}
       <div className="rounded-2xl border border-gray-100 shadow-sm bg-white overflow-hidden">
