@@ -5,7 +5,7 @@ import {
 } from "../../hooks/useTeams";
 import type { Person } from "../../hooks/usePeople";
 import { useMe } from "../../hooks/useAuth";
-import { Avatar, Pill, ScreenHeader, Sheet, EmptyState, CardSkeletons, PrimaryButton, useToast } from "../ui";
+import { Pill, ScreenHeader, Sheet, EmptyState, CardSkeletons, PrimaryButton, useToast } from "../ui";
 
 function nm(p: Person) { return `${p.firstName} ${p.lastName || ""}`.trim(); }
 
@@ -33,7 +33,6 @@ function MemberPicker({ open, onClose, people, onConfirm, title, pending }: {
             return (
               <button key={p._id} onClick={() => toggle(p._id)}
                 className="w-full flex items-center gap-3 p-2.5 rounded-[12px]" style={{ background: "var(--m-inset)" }}>
-                <Avatar name={nm(p)} size={34} radius={11} />
                 <span className="text-[14px] font-semibold flex-1 text-left truncate">{nm(p)}</span>
                 {p.zone && <span className="text-[11px] text-[var(--m-faint)]">{p.zone}</span>}
                 <span className="w-5 h-5 rounded-md flex items-center justify-center border"
@@ -92,7 +91,6 @@ export default function MTeams() {
                 <div className="flex flex-wrap gap-2">
                   {t.members.map((m) => (
                     <span key={m._id} className="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-[10px]" style={{ background: "var(--m-inset)" }}>
-                      <Avatar name={nm(m)} size={26} radius={8} />
                       <span className="text-[12.5px] font-semibold">{nm(m)}</span>
                       {isAdmin && (
                         <button onClick={() => removeMembers.mutate({ id: t._id, members: [m._id] }, { onSuccess: () => toast("Member removed") })}

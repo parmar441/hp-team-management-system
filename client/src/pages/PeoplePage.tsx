@@ -280,9 +280,6 @@ export default function PeoplePage() {
                     </td>
                     <td className="p-3 sm:p-4">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 text-xs font-bold text-indigo-600">
-                          {(p.firstName?.[0] || "?").toUpperCase()}
-                        </div>
                         <div className="min-w-0">
                           <p className="font-semibold text-gray-900 truncate">{p.fullName || `${p.firstName} ${p.lastName || ""}`.trim()}</p>
                           {/* Show zone/mandal inline on mobile where those columns are hidden */}

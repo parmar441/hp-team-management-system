@@ -10,7 +10,7 @@ import { useDynamicZoneNames } from "../../hooks/useDynamicZones";
 import { useDynamicAreas } from "../../hooks/useDynamicAreas";
 import { useMe } from "../../hooks/useAuth";
 import { useDebounce } from "../../hooks/useDebounce";
-import { Avatar, Pill, ScreenHeader, Sheet, EmptyState, CardSkeletons, PrimaryButton, useToast } from "../ui";
+import { Pill, ScreenHeader, Sheet, EmptyState, CardSkeletons, PrimaryButton, useToast } from "../ui";
 
 interface Filters { zone: string; area: string; gender: string; country: string; aco: string; checkedIn: string }
 const EMPTY_FILTERS: Filters = { zone: "", area: "", gender: "", country: "", aco: "", checkedIn: "" };
@@ -173,7 +173,6 @@ export default function MPeople() {
                       {sel && <Check className="w-4 h-4 text-white" />}
                     </span>
                   )}
-                  <Avatar name={fullName(p)} />
                   <div className="min-w-0 flex-1">
                     <p className="text-[15.5px] font-bold leading-tight truncate">{fullName(p)}</p>
                     <p className="text-[12.5px] font-medium text-[var(--m-muted)] truncate">
@@ -246,7 +245,6 @@ export default function MPeople() {
       <Sheet open={!!actionPerson} onClose={() => setActionPerson(null)}
         title={actionPerson && (
           <div className="flex items-center gap-3">
-            <Avatar name={fullName(actionPerson)} size={38} />
             <div><p className="text-[15px] font-bold leading-tight">{fullName(actionPerson)}</p>
               <p className="text-[12px] text-[var(--m-muted)]">{actionPerson.zone || "Unassigned"}</p></div>
           </div>
@@ -312,7 +310,6 @@ function PersonDetail({ p, isAdmin, onCheckIn, onAco }: {
   return (
     <div className="pb-3">
       <div className="flex flex-col items-center text-center pt-1 pb-4">
-        <Avatar name={name} size={72} radius={20} />
         <p className="m-serif text-[23px] font-bold mt-3 leading-tight">{name}</p>
         <p className="text-[13px] text-[var(--m-muted)]">{[p.city, p.state].filter(Boolean).join(", ") || "—"}</p>
         <div className="flex items-center gap-2 mt-3 flex-wrap justify-center">

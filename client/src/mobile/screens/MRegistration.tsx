@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Upload, Download, Users, Plus } from "lucide-react";
 import { useCreatePerson, useBulkImportPeople, usePeople, type Person } from "../../hooks/usePeople";
 import { parseCSVRow, downloadCSV } from "../../lib/utils";
-import { Avatar, Pill, ScreenHeader, IconButton, Sheet, Label, TextInput, ChipGroup, PrimaryButton, Card, CardSkeletons, EmptyState, useToast } from "../ui";
+import { Pill, ScreenHeader, IconButton, Sheet, Label, TextInput, ChipGroup, PrimaryButton, Card, CardSkeletons, EmptyState, useToast } from "../ui";
 
 const TEMPLATE_CSV =
   "firstName,lastName,email,phone,gender,mandal,country,ageRange,acoNeeded,city,state,memberId,familyId,category\n" +
@@ -152,7 +152,6 @@ export default function MRegistration() {
             {people.map((p) => (
               <div key={p._id} className="m-sheen flex items-center gap-3 rounded-[14px] border p-2.5"
                 style={{ backgroundColor: "var(--m-card)", borderColor: "var(--m-card-border)", boxShadow: "var(--m-shadow-card)" }}>
-                <Avatar name={fullName(p)} size={36} radius={11} />
                 <div className="min-w-0 flex-1">
                   <p className="text-[14px] font-semibold truncate">{fullName(p)}</p>
                   <p className="text-[12px] text-[var(--m-muted)] truncate">{[p.zone, p.mandal].filter(Boolean).join(" · ") || "Unassigned"}</p>

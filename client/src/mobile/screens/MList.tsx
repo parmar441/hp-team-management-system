@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Download, List as ListIcon, Search } from "lucide-react";
 import { usePeople, type Person } from "../../hooks/usePeople";
 import { useDebounce } from "../../hooks/useDebounce";
-import { Avatar, Pill, ScreenHeader, EmptyState, Spinner, useToast } from "../ui";
+import { Pill, ScreenHeader, EmptyState, Spinner, useToast } from "../ui";
 import { downloadCSV } from "../../lib/utils";
 
 export default function MList() {
@@ -45,7 +45,6 @@ export default function MList() {
               return (
                 <div key={p._id} className="flex items-center gap-2.5 px-[15px] py-2.5"
                   style={i > 0 ? { borderTop: "1px solid var(--m-card-border)" } : undefined}>
-                  <Avatar name={name} size={34} radius={11} />
                   <div className="min-w-0 flex-1">
                     <p className="text-[14px] font-semibold truncate">{name}</p>
                     <p className="text-[11.5px] text-[var(--m-faint)] truncate">{[p.zone, p.area].filter(Boolean).join(" · ") || "Unassigned"}</p>

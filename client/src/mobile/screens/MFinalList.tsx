@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Download, FileText } from "lucide-react";
 import { useAssignments } from "../../hooks/useAssignments";
-import { Avatar, ScreenHeader, EmptyState, Spinner, useToast } from "../ui";
+import { ScreenHeader, EmptyState, Spinner, useToast } from "../ui";
 import { downloadCSV } from "../../lib/utils";
 
 interface Group { teamName: string; hotelName: string; room: string; members: any[]; zone: string }
@@ -64,7 +64,6 @@ export default function MFinalList() {
                     const name = `${m.firstName} ${m.lastName || ""}`.trim();
                     return (
                       <div key={m._id} className="flex items-center gap-2.5">
-                        <Avatar name={name} size={34} radius={11} />
                         <span className="text-[14px] font-semibold flex-1 truncate">{name}</span>
                         <span className="text-[12px] text-[var(--m-faint)]">{m.memberId || ""}</span>
                       </div>
