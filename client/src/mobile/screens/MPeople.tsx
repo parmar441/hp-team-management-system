@@ -1,22 +1,16 @@
 import { useMemo, useState } from "react";
 import {
-  Search, SlidersHorizontal, MoreVertical, Check, X, Trash2, Eye, UserCheck, ToggleLeft, Plus,
+  Search, SlidersHorizontal, MoreVertical, Check, X, Trash2, Eye, UserCheck, ToggleLeft,
 } from "lucide-react";
 import {
-  usePeople, useCreatePerson, useToggleAco, useToggleCheckIn, useDeletePerson,
+  usePeople, useToggleAco, useToggleCheckIn, useDeletePerson,
   useBulkDeletePeople, useBulkToggleAco, useBulkCheckIn, type Person, type PeopleFilters,
 } from "../../hooks/usePeople";
 import { useDynamicZoneNames } from "../../hooks/useDynamicZones";
 import { useDynamicAreas } from "../../hooks/useDynamicAreas";
 import { useMe } from "../../hooks/useAuth";
 import { useDebounce } from "../../hooks/useDebounce";
-import { Avatar, Pill, ScreenHeader, IconButton, Sheet, EmptyState, CardSkeletons, PrimaryButton, Label, TextInput, ChipGroup, useToast } from "../ui";
-
-const AGE_RANGES = ["0-6", "7-14", "15-45", "46-65", "65+"];
-const EMPTY_PERSON: Partial<Person> = {
-  firstName: "", lastName: "", email: "", phone: "", city: "", state: "", country: "",
-  gender: "M", ageRange: "15-45", acoNeeded: "No",
-};
+import { Avatar, Pill, ScreenHeader, Sheet, EmptyState, CardSkeletons, PrimaryButton, useToast } from "../ui";
 
 interface Filters { zone: string; area: string; gender: string; country: string; aco: string; checkedIn: string }
 const EMPTY_FILTERS: Filters = { zone: "", area: "", gender: "", country: "", aco: "", checkedIn: "" };
@@ -61,9 +55,6 @@ export default function MPeople() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [actionPerson, setActionPerson] = useState<Person | null>(null);
   const [detailPerson, setDetailPerson] = useState<Person | null>(null);
-  const [addOpen, setAddOpen] = useState(false);
-  const [addForm, setAddForm] = useState<Partial<Person>>(EMPTY_PERSON);
-  const createPerson = useCreatePerson();
 
   const debounced = useDebounce(query, 350);
   const serverFilters: PeopleFilters = {
@@ -97,15 +88,6 @@ export default function MPeople() {
   const areaOpts = (areas ?? []).map((a: any) => ({ value: a.name as string, label: a.name as string }));
 
   function setF(k: keyof Filters, v: string) { setFilters((f) => ({ ...f, [k]: v })); }
-  function setA(k: keyof Person, v: string) { setAddForm((f) => ({ ...f, [k]: v })); }
-
-  function submitAdd() {
-    if (!addForm.firstName?.trim()) { toast("First name is required"); return; }
-    createPerson.mutate(addForm, {
-      onSuccess: () => { toast("Person registered"); setAddOpen(false); setAddForm(EMPTY_PERSON); },
-      onError: () => toast("Failed to register person"),
-    });
-  }
 
   function toggleSelect(id: string) {
     setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -118,22 +100,15 @@ export default function MPeople() {
         title="People"
         subtitle={`${data?.total ?? people.length} registered members`}
         action={
-          <>
-            <button onClick={() => setFilterOpen(true)} aria-label="Filters"
-              className="relative w-[42px] h-[42px] rounded-[13px] flex items-center justify-center active:scale-95"
-              style={{ background: "var(--m-card)", border: "1px solid var(--m-card-border)" }}>
-              <SlidersHorizontal className="w-[18px] h-[18px] text-[var(--m-text)]" />
-              {activeCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center text-white"
-                  style={{ background: "var(--m-accent)" }}>{activeCount}</span>
-              )}
-            </button>
-            {isAdmin && (
-              <IconButton onClick={() => { setAddForm(EMPTY_PERSON); setAddOpen(true); }} aria-label="Add person">
-                <Plus className="w-5 h-5" />
-              </IconButton>
+          <button onClick={() => setFilterOpen(true)} aria-label="Filters"
+            className="relative w-[42px] h-[42px] rounded-[13px] flex items-center justify-center active:scale-95"
+            style={{ background: "var(--m-card)", border: "1px solid var(--m-card-border)" }}>
+            <SlidersHorizontal className="w-[18px] h-[18px] text-[var(--m-text)]" />
+            {activeCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center text-white"
+                style={{ background: "var(--m-accent)" }}>{activeCount}</span>
             )}
-          </>
+          </button>
         }
       />
 
@@ -265,46 +240,6 @@ export default function MPeople() {
         <ChipRow label="Country" options={[{ value: "USA", label: "USA" }, { value: "Canada", label: "Canada" }]} value={filters.country} onChange={(v) => setF("country", v)} />
         <ChipRow label="ACO participation" options={[{ value: "Yes", label: "ACO player" }, { value: "No", label: "Non-ACO" }]} value={filters.aco} onChange={(v) => setF("aco", v)} />
         <ChipRow label="Check-in status" options={[{ value: "Yes", label: "Checked in" }, { value: "No", label: "Not checked in" }]} value={filters.checkedIn} onChange={(v) => setF("checkedIn", v)} />
-      </Sheet>
-
-      {/* Add person sheet */}
-      <Sheet open={addOpen} onClose={() => setAddOpen(false)}
-        title={<p className="m-serif text-[20px] font-bold">New person</p>}
-        footer={<PrimaryButton onClick={submitAdd} disabled={createPerson.isPending}>
-          {createPerson.isPending ? "Registering…" : "Register person"}
-        </PrimaryButton>}>
-        <div className="space-y-4 pb-2">
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>First name *</Label><TextInput placeholder="First name" value={addForm.firstName || ""} onChange={(e) => setA("firstName", e.target.value)} /></div>
-            <div><Label>Last name</Label><TextInput placeholder="Last name" value={addForm.lastName || ""} onChange={(e) => setA("lastName", e.target.value)} /></div>
-          </div>
-          <div><Label>Email</Label><TextInput type="email" placeholder="email@example.com" value={addForm.email || ""} onChange={(e) => setA("email", e.target.value)} /></div>
-          <div><Label>Phone</Label><TextInput placeholder="Phone number" value={addForm.phone || ""} onChange={(e) => setA("phone", e.target.value)} /></div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>City</Label><TextInput placeholder="City" value={addForm.city || ""} onChange={(e) => setA("city", e.target.value)} /></div>
-            <div><Label>State (mandal)</Label><TextInput placeholder="e.g. New Jersey" value={addForm.state || ""} onChange={(e) => { setA("state", e.target.value); setA("mandal", e.target.value); }} /></div>
-          </div>
-          <div><Label>Country</Label>
-            <ChipGroup value={(addForm.country as string) || ""} allowEmpty
-              onChange={(v) => setA("country", v)}
-              options={[{ value: "USA", label: "USA" }, { value: "Canada", label: "Canada" }, { value: "Other", label: "Other" }]} />
-          </div>
-          <div><Label>Gender</Label>
-            <ChipGroup value={(addForm.gender as string) || "M"}
-              onChange={(v) => setA("gender", v || "M")}
-              options={[{ value: "M", label: "Male" }, { value: "F", label: "Female" }]} />
-          </div>
-          <div><Label>Age range</Label>
-            <ChipGroup value={(addForm.ageRange as string) || ""}
-              onChange={(v) => setA("ageRange", v)}
-              options={AGE_RANGES.map((r) => ({ value: r, label: r }))} />
-          </div>
-          <div><Label>ACO participation</Label>
-            <ChipGroup value={(addForm.acoNeeded as string) || "No"}
-              onChange={(v) => setA("acoNeeded", v || "No")}
-              options={[{ value: "Yes", label: "ACO player" }, { value: "No", label: "Non-ACO" }]} />
-          </div>
-        </div>
       </Sheet>
 
       {/* Action sheet */}

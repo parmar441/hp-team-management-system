@@ -24,7 +24,7 @@ export default function MZones() {
   const [name, setName] = useState("");
   const [isDefault, setIsDefault] = useState(false);
   const [ruleFor, setRuleFor] = useState<DynamicZone | null>(null);
-  const [rule, setRule] = useState({ field: "mandal" as typeof FIELDS[number], matchValue: "", priority: 10 });
+  const [rule, setRule] = useState({ field: "mandal" as typeof FIELDS[number], matchValue: "" });
 
   const list: DynamicZone[] = zones ?? [];
 
@@ -36,10 +36,10 @@ export default function MZones() {
     });
   }
   function addNewRule() {
-    if (!ruleFor || !rule.matchValue.trim()) { toast("Match value required"); return; }
-    addRule.mutate({ zoneId: ruleFor._id, data: rule }, {
-      onSuccess: () => { toast("Rule added"); setRuleFor(null); setRule({ field: "mandal", matchValue: "", priority: 10 }); },
-      onError: () => toast("Failed to add rule"),
+    if (!ruleFor || !rule.matchValue.trim()) { toast("Value required"); return; }
+    addRule.mutate({ zoneId: ruleFor._id, data: { ...rule, priority: 0 } }, {
+      onSuccess: () => { toast("Condition added"); setRuleFor(null); setRule({ field: "mandal", matchValue: "" }); },
+      onError: () => toast("Failed to add condition"),
     });
   }
 
@@ -63,11 +63,15 @@ export default function MZones() {
                 <div className="flex items-center gap-2 mb-3">
                   <p className="text-[16.5px] font-bold flex-1 truncate">{z.name}</p>
                   {z.isDefault && <Pill tone="accent">DEFAULT</Pill>}
-                  <span className="text-[12px] text-[var(--m-faint)]">{(z.rules ?? []).length} rules</span>
+                  <span className="text-[12px] text-[var(--m-faint)]">{z.isDefault ? "fallback" : `${(z.rules ?? []).length} cond.`}</span>
                 </div>
-                <RuleRows rules={(z.rules ?? []) as any} canEdit={!!isAdmin}
-                  onDelete={(id) => deleteRule.mutate(id, { onSuccess: () => toast("Rule deleted") })} />
-                {isAdmin && <AddRuleButton onClick={() => setRuleFor(z)} />}
+                {z.isDefault ? (
+                  <p className="text-[12.5px] text-[var(--m-muted)] leading-snug">Anyone not matched by another zone's conditions lands here.</p>
+                ) : (
+                  <RuleRows rules={(z.rules ?? []) as any} canEdit={!!isAdmin}
+                    onDelete={(id) => deleteRule.mutate(id, { onSuccess: () => toast("Condition deleted") })} />
+                )}
+                {isAdmin && !z.isDefault && <AddRuleButton onClick={() => setRuleFor(z)} />}
                 {isAdmin && (
                   <button onClick={() => deleteZone.mutate(z._id, { onSuccess: () => toast("Zone deleted") })}
                     className="mt-2 text-[12.5px] font-semibold" style={{ color: "var(--m-rose-fg)" }}>Delete zone</button>
@@ -91,19 +95,31 @@ export default function MZones() {
         </div>
       </Sheet>
 
-      {/* Add rule */}
-      <Sheet open={!!ruleFor} onClose={() => setRuleFor(null)} title={<p className="m-serif text-[20px] font-bold">Add rule</p>}
-        footer={<PrimaryButton onClick={addNewRule} disabled={addRule.isPending}>Add rule</PrimaryButton>}>
+      {/* Add condition */}
+      <Sheet open={!!ruleFor} onClose={() => setRuleFor(null)} title={<p className="m-serif text-[20px] font-bold">Add condition</p>}
+        footer={<PrimaryButton onClick={addNewRule} disabled={addRule.isPending}>Add condition</PrimaryButton>}>
         <div className="space-y-4 pb-2">
+          <p className="text-[12.5px] text-[var(--m-muted)] leading-snug">
+            All conditions on a zone must match (<span className="font-semibold text-[var(--m-text)]">AND</span>). Within one condition, list several values with <span className="font-semibold text-[var(--m-text)]">+</span> to match any (<span className="font-semibold text-[var(--m-text)]">OR</span>).
+          </p>
           <div><Label>Field</Label>
-            <ChipGroup value={rule.field} onChange={(v) => setRule((r) => ({ ...r, field: (v || "mandal") as typeof FIELDS[number] }))}
+            <ChipGroup value={rule.field} onChange={(v) => setRule((r) => ({ ...r, field: (v || "mandal") as typeof FIELDS[number], matchValue: "" }))}
               options={FIELDS.map((f) => ({ value: f, label: FIELD_LABEL[f] }))} />
           </div>
-          <div><Label>Match value</Label>
-            <TextInput placeholder={rule.field === "gender" ? "M or F" : "Value"} value={rule.matchValue}
-              onChange={(e) => setRule((r) => ({ ...r, matchValue: e.target.value }))} /></div>
-          <div><Label>Priority</Label>
-            <TextInput type="number" value={String(rule.priority)} onChange={(e) => setRule((r) => ({ ...r, priority: parseInt(e.target.value) || 0 }))} /></div>
+          {rule.field === "gender" ? (
+            <div><Label>Value</Label>
+              <ChipGroup value={rule.matchValue} onChange={(v) => setRule((r) => ({ ...r, matchValue: v || "" }))}
+                options={[{ value: "Male", label: "Male" }, { value: "Female", label: "Female" }]} />
+            </div>
+          ) : (
+            <div><Label>Value{rule.field === "country" ? "  (us · ca · gb)" : ""}</Label>
+              <TextInput
+                placeholder={rule.field === "country" ? "us  or  gb+pa+in" : "AUSTIN+DALLAS+HOUSTON"}
+                value={rule.matchValue}
+                onChange={(e) => setRule((r) => ({ ...r, matchValue: e.target.value }))} />
+              <p className="text-[11px] text-[var(--m-faint)] mt-1.5">Separate multiple values with <span className="font-semibold">+</span> (matches any).</p>
+            </div>
+          )}
         </div>
       </Sheet>
     </div>

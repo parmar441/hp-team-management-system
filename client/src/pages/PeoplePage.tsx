@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { usePeople, useCreatePerson, useUpdatePerson, useDeletePerson, useToggleAco, useBulkDeletePeople, useBulkImportPeople, type Person } from "../hooks/usePeople";
+import { useState } from "react";
+import { usePeople, useCreatePerson, useUpdatePerson, useDeletePerson, useToggleAco, useBulkDeletePeople, type Person } from "../hooks/usePeople";
 import { useDynamicZoneNames } from "../hooks/useDynamicZones";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
@@ -7,7 +7,7 @@ import { ConfirmDialog } from "../components/ui/confirm-dialog";
 import { useToast } from "../components/ui/toaster";
 import { PageContainer, PageHeader } from "../components/ui/page";
 import { useDebounce } from "../hooks/useDebounce";
-import { Users, Plus, Upload, Download, Trash2, Edit2, Search, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { Users, Download, Trash2, Edit2, Search, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 
 const EMPTY_PERSON: Partial<Person> = {
   firstName: "", lastName: "", email: "", phone: "", city: "", state: "", country: "",
@@ -133,7 +133,6 @@ export default function PeoplePage() {
   const [editPerson, setEditPerson] = useState<Person | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
-  const csvRef = useRef<HTMLInputElement>(null);
 
   const debouncedSearch = useDebounce(search, 350);
   const filters = { search: debouncedSearch, zone: zoneFilter, acoNeeded: acoFilter, page, pageSize: 50 };
@@ -145,7 +144,6 @@ export default function PeoplePage() {
   const deletePerson = useDeletePerson();
   const toggleAco = useToggleAco();
   const bulkDelete = useBulkDeletePeople();
-  const bulkImport = useBulkImportPeople();
 
   const people: Person[] = data?.people ?? [];
   const total = data?.total ?? 0;
@@ -168,25 +166,6 @@ export default function PeoplePage() {
     toast.success("CSV exported");
   }
 
-  async function handleCSVImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-    const lines = text.split("\n");
-    const headers = lines[0].split(",").map((h) => h.trim());
-    const rows = lines.slice(1).filter((l) => l.trim()).map((line) => {
-      const vals = line.split(",");
-      return Object.fromEntries(headers.map((h, i) => [h, vals[i]?.trim() || ""]));
-    });
-    try {
-      await bulkImport.mutateAsync(rows as any);
-      toast.success(`${rows.length} people imported`);
-    } catch {
-      toast.error("Import failed. Check your CSV format.");
-    }
-    e.target.value = "";
-  }
-
   const hasFilters = search || zoneFilter || acoFilter;
 
   return (
@@ -196,25 +175,11 @@ export default function PeoplePage() {
         title="People"
         subtitle={`${total} registered members`}
         actions={
-          <>
-            <button onClick={exportCSV} title="Export CSV"
-              className="flex items-center gap-2 px-2.5 sm:px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm">
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Export</span>
-            </button>
-            <button onClick={() => csvRef.current?.click()} disabled={bulkImport.isPending} title="Import CSV"
-              className="flex items-center gap-2 px-2.5 sm:px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60">
-              <Upload className="w-4 h-4" />
-              <span className="hidden sm:inline">{bulkImport.isPending ? "Importing…" : "Import"}</span>
-            </button>
-            <input ref={csvRef} type="file" accept=".csv" className="hidden" onChange={handleCSVImport} />
-            <button onClick={() => { setEditPerson(null); setShowForm(true); }}
-              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors shadow-sm shadow-indigo-200">
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Add Person</span>
-              <span className="sm:hidden">Add</span>
-            </button>
-          </>
+          <button onClick={exportCSV} title="Export CSV"
+            className="flex items-center gap-2 px-2.5 sm:px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm">
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Export</span>
+          </button>
         }
       />
 

@@ -1,18 +1,38 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useCreatePerson, type Person } from "../../hooks/usePeople";
-import { ScreenHeader, Label, TextInput, ChipGroup, PrimaryButton, useToast } from "../ui";
+import { useRef, useState } from "react";
+import { Upload, Users } from "lucide-react";
+import { useCreatePerson, useBulkImportPeople, usePeople, type Person } from "../../hooks/usePeople";
+import { parseCSVRow } from "../../lib/utils";
+import { Avatar, Pill, ScreenHeader, Label, TextInput, ChipGroup, PrimaryButton, Card, CardSkeletons, EmptyState, useToast } from "../ui";
 
 const EMPTY: Partial<Person> = {
   firstName: "", lastName: "", email: "", phone: "", familyId: "", city: "", state: "",
   country: "USA", gender: "M", ageRange: "15-45", acoNeeded: "No", mandal: "",
 };
 
+function parseCSV(text: string): Record<string, string>[] {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) return [];
+  const headers = parseCSVRow(lines[0]).map((h) => h.trim());
+  return lines.slice(1).map((line) => {
+    const vals = parseCSVRow(line);
+    const obj: Record<string, string> = {};
+    headers.forEach((h, i) => { if (h) obj[h] = (vals[i] ?? "").trim(); });
+    return obj;
+  });
+}
+
+function fullName(p: Person) { return p.fullName || `${p.firstName} ${p.lastName || ""}`.trim(); }
+
 export default function MRegistration() {
   const toast = useToast();
-  const navigate = useNavigate();
   const createPerson = useCreatePerson();
+  const bulkImport = useBulkImportPeople();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState<Partial<Person>>(EMPTY);
+
+  const { data, isLoading } = usePeople({ pageSize: 200 });
+  const people: Person[] = data?.people ?? [];
+  const total = data?.total ?? people.length;
 
   const set = (k: keyof Person, v: any) => setForm((f) => ({ ...f, [k]: v }));
   const input = (k: keyof Person) => ({
@@ -23,15 +43,51 @@ export default function MRegistration() {
   function submit() {
     if (!form.firstName?.trim()) { toast("First name is required"); return; }
     createPerson.mutate(form, {
-      onSuccess: () => { toast("Person registered"); setForm(EMPTY); navigate("/people"); },
+      onSuccess: () => { toast("Person registered"); setForm(EMPTY); },
       onError: () => toast("Failed to register"),
     });
   }
 
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const rows = parseCSV(await file.text());
+      if (rows.length === 0) { toast("No rows found in file"); return; }
+      await bulkImport.mutateAsync(rows as any);
+      toast(`${rows.length} people imported`);
+    } catch {
+      toast("Import failed — check the CSV format");
+    }
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
   return (
     <div className="pt-2 pb-4">
-      <ScreenHeader title="Register" subtitle="Add a new member to the system" />
+      <ScreenHeader title="Register" subtitle="Add members one by one or import in bulk" />
 
+      {/* Bulk import */}
+      <Card className="mb-4">
+        <div className="flex items-center gap-3">
+          <span className="w-10 h-10 rounded-[12px] flex items-center justify-center flex-shrink-0"
+            style={{ background: "var(--m-accent-soft)", color: "var(--m-accent)" }}>
+            <Upload className="w-5 h-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] font-bold leading-tight">Bulk import</p>
+            <p className="text-[12px] text-[var(--m-muted)] mt-0.5">CSV with a header row (firstName, lastName, gender, mandal, country…)</p>
+          </div>
+        </div>
+        <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleFile} />
+        <button onClick={() => fileRef.current?.click()} disabled={bulkImport.isPending}
+          className="m-press mt-3 w-full h-[44px] rounded-[12px] border border-dashed text-[13.5px] font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60"
+          style={{ borderColor: "var(--m-accent-border)", color: "var(--m-accent)" }}>
+          <Upload className="w-4 h-4" /> {bulkImport.isPending ? "Importing…" : "Choose CSV file"}
+        </button>
+      </Card>
+
+      {/* Single registration */}
+      <p className="text-[13.5px] font-bold mb-2.5 px-0.5">Add one member</p>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div><Label>First name *</Label><TextInput placeholder="First name" {...input("firstName")} /></div>
@@ -65,12 +121,35 @@ export default function MRegistration() {
             options={[{ value: "Yes", label: "ACO player" }, { value: "No", label: "Non-ACO" }]} />
         </div>
 
-        <div className="pt-2">
+        <div className="pt-1">
           <PrimaryButton onClick={submit} disabled={createPerson.isPending}>
             {createPerson.isPending ? "Registering…" : "Register person"}
           </PrimaryButton>
         </div>
       </div>
+
+      {/* Registered members list */}
+      <div className="flex items-center justify-between mt-7 mb-2.5 px-0.5">
+        <p className="text-[13.5px] font-bold">Registered members</p>
+        <span className="text-[12px] font-semibold text-[var(--m-faint)] tabular-nums">{total}</span>
+      </div>
+      {isLoading ? <CardSkeletons count={4} height={64} />
+        : people.length === 0 ? <EmptyState icon={<Users className="w-6 h-6" />} title="No members yet" hint="Register someone above to get started" />
+        : (
+          <div className="space-y-2">
+            {people.map((p) => (
+              <div key={p._id} className="m-sheen flex items-center gap-3 rounded-[14px] border p-2.5"
+                style={{ backgroundColor: "var(--m-card)", borderColor: "var(--m-card-border)", boxShadow: "var(--m-shadow-card)" }}>
+                <Avatar name={fullName(p)} size={36} radius={11} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[14px] font-semibold truncate">{fullName(p)}</p>
+                  <p className="text-[12px] text-[var(--m-muted)] truncate">{[p.zone, p.mandal].filter(Boolean).join(" · ") || "Unassigned"}</p>
+                </div>
+                <Pill tone={p.acoNeeded === "Yes" ? "emerald" : "neutral"}>{p.acoNeeded === "Yes" ? "ACO" : "—"}</Pill>
+              </div>
+            ))}
+          </div>
+        )}
     </div>
   );
 }
