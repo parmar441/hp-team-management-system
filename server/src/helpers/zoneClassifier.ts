@@ -3,6 +3,7 @@ import { DynamicZoneRule } from "../models/DynamicZoneRule.js";
 import { DynamicArea } from "../models/DynamicArea.js";
 import { DynamicAreaRule } from "../models/DynamicAreaRule.js";
 import { Person } from "../models/Person.js";
+import { Team } from "../models/Team.js";
 
 interface PersonLike {
   _id?: any;
@@ -107,7 +108,23 @@ export async function classifyPersonArea(person: PersonLike, zoneName: string): 
   return null;
 }
 
-export async function reapplyAllZoneRules(): Promise<{ updated: number }> {
+/** Recompute each team's zone from its first member's current zone (spec rule). */
+export async function reapplyTeamZones(): Promise<{ updated: number }> {
+  const teams = await Team.find().populate({ path: "members", select: "zone" });
+  let updated = 0;
+  for (const team of teams) {
+    const members = (team.members ?? []) as any[];
+    const firstZone = members.length > 0 ? (members[0]?.zone ?? undefined) : undefined;
+    if ((team.zone ?? undefined) !== firstZone) {
+      team.zone = firstZone;
+      await team.save();
+      updated++;
+    }
+  }
+  return { updated };
+}
+
+export async function reapplyAllZoneRules(): Promise<{ updated: number; teamsUpdated: number }> {
   const { zones, defaultName } = await loadZoneDefs();
   const people = await Person.find();
   let updated = 0;
@@ -117,7 +134,9 @@ export async function reapplyAllZoneRules(): Promise<{ updated: number }> {
     await Person.updateOne({ _id: person._id }, { zone: zone ?? undefined, area: area ?? undefined });
     updated++;
   }
-  return { updated };
+  // Teams follow their members' new zones.
+  const { updated: teamsUpdated } = await reapplyTeamZones();
+  return { updated, teamsUpdated };
 }
 
 export async function reapplyAllAreaRules(): Promise<{ updated: number }> {
