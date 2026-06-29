@@ -274,9 +274,9 @@ router.delete("/credentials/:id", requireAdmin, async (req: Request, res: Respon
   }
 });
 
-// ── Hotel Person Credential Management ──────────────────────────────────────
+// ── Hotel Coordinator Credential Management ──────────────────────────────────────
 
-// POST /api/admin/hotel-person/credentials — create hotel person user with credentials
+// POST /api/admin/hotel-person/credentials — create hotel coordinator user with credentials
 router.post("/hotel-person/credentials", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   try {
     const { username, password } = req.body;
@@ -290,7 +290,7 @@ router.post("/hotel-person/credentials", requireAdmin, async (req: Request, res:
   }
 });
 
-// DELETE /api/admin/hotel-person/credentials/:id — delete hotel person credentials and user
+// DELETE /api/admin/hotel-person/credentials/:id — delete hotel coordinator credentials and user
 router.delete("/hotel-person/credentials/:id", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   try {
     const credential = await LeadCredential.findById(req.params.id);
@@ -317,7 +317,7 @@ router.patch("/hotel-person/credentials/:id/regenerate", requireAdmin, async (re
   }
 });
 
-// ── Hotel Person Assignment Management ──────────────────────────────────────
+// ── Hotel Coordinator Assignment Management ──────────────────────────────────────
 
 // GET /api/admin/hotel-person/assignments — list all hotel-person-to-hotel assignments
 router.get("/hotel-person/assignments", requireAdmin, async (_req: Request, res: Response): Promise<void> => {
@@ -329,7 +329,7 @@ router.get("/hotel-person/assignments", requireAdmin, async (_req: Request, res:
   }
 });
 
-// POST /api/admin/hotel-person/assignments — assign a hotel to a hotel person
+// POST /api/admin/hotel-person/assignments — assign a hotel to a hotel coordinator
 router.post("/hotel-person/assignments", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId, hotelId } = req.body;
@@ -340,7 +340,7 @@ router.post("/hotel-person/assignments", requireAdmin, async (req: Request, res:
   }
 });
 
-// DELETE /api/admin/hotel-person/assignments/:id — remove hotel assignment from hotel person
+// DELETE /api/admin/hotel-person/assignments/:id — remove hotel assignment from hotel coordinator
 router.delete("/hotel-person/assignments/:id", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   try {
     await HotelPersonAssignment.findByIdAndDelete(req.params.id);

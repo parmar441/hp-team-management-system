@@ -73,10 +73,10 @@ export default function MDashboard() {
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: r.dot }} /> {r.label}
               </span>
               <span className="w-20 text-right text-[13.5px] tabular-nums">
-                <span className="font-bold">{c.count}</span> <span className="text-[var(--m-faint)]">{pct(c.count, peopleTotal)}%</span>
+                <span className="font-bold">{c.count}</span> <span className="text-[var(--m-faint)]">({pct(c.count, peopleTotal)}%)</span>
               </span>
               <span className="w-24 text-right text-[13.5px] tabular-nums">
-                <span className="font-bold">{c.checkedIn}</span> <span className="text-[var(--m-faint)]">{pct(c.checkedIn, c.count)}%</span>
+                <span className="font-bold">{c.checkedIn}</span> <span className="text-[var(--m-faint)]">({pct(c.checkedIn, c.count)}%)</span>
               </span>
             </div>
           );

@@ -101,7 +101,7 @@ const roleBadges: Record<string, { label: string; cls: string }> = {
   admin:        { label: "Admin",        cls: "bg-violet-500/20 text-violet-300 border border-violet-500/20" },
   zone_lead:    { label: "Zone Lead",    cls: "bg-sky-500/20 text-sky-300 border border-sky-500/20" },
   area_lead:    { label: "Area Lead",    cls: "bg-cyan-500/20 text-cyan-300 border border-cyan-500/20" },
-  hotel_person: { label: "Hotel Person", cls: "bg-amber-500/20 text-amber-300 border border-amber-500/20" },
+  hotel_person: { label: "Hotel Coordinator", cls: "bg-amber-500/20 text-amber-300 border border-amber-500/20" },
   team_lead:    { label: "Team Lead",    cls: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/20" },
   user:         { label: "User",         cls: "bg-slate-500/20 text-slate-400 border border-slate-500/20" },
 };

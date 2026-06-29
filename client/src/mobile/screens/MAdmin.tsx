@@ -24,7 +24,7 @@ const ROLES = [
   { value: "admin", label: "Admin" },
   { value: "zone_lead", label: "Zone Lead" },
   { value: "area_lead", label: "Area Lead" },
-  { value: "hotel_person", label: "Hotel Person" },
+  { value: "hotel_person", label: "Hotel Coordinator" },
 ];
 const roleLabel = (r: string) => ROLES.find((x) => x.value === r)?.label ?? r;
 
@@ -68,7 +68,7 @@ export default function MAdmin() {
             style={tab === t
               ? { background: "var(--m-accent-soft)", color: "var(--m-accent)", border: "1px solid var(--m-accent-border)" }
               : { background: "var(--m-card)", color: "var(--m-muted)", border: "1px solid var(--m-card-border)" }}>
-            {t === "users" ? "Users & Roles" : "Hotel Persons"}
+            {t === "users" ? "Users & Roles" : "Hotel Coordinators"}
           </button>
         ))}
       </div>
@@ -137,7 +137,7 @@ function UsersTab({ users, isLoading, toast }: { users: any[]; isLoading: boolea
         <button onClick={() => fileRef.current?.click()} disabled={bulkImport.isPending}
           className="m-press flex-1 h-[40px] rounded-[12px] border border-dashed text-[12.5px] font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60"
           style={{ borderColor: "var(--m-accent-border)", color: "var(--m-accent)" }}>
-          <Upload className="w-4 h-4" /> {bulkImport.isPending ? "Importing…" : "Import CSV"}
+          <Upload className="w-4 h-4" /> {bulkImport.isPending ? "Importing…" : "Choose CSV"}
         </button>
       </div>
       {isLoading ? <CardSkeletons count={6} height={64} />
@@ -234,7 +234,7 @@ function UsersTab({ users, isLoading, toast }: { users: any[]; isLoading: boolea
   );
 }
 
-/* ── Hotel persons ─────────────────────────────────────────── */
+/* ── Hotel coordinators ─────────────────────────────────────────── */
 function HotelPersonsTab({ users, isLoading, toast }: { users: any[]; isLoading: boolean; toast: (m: string) => void }) {
   const { data: assignments } = useHotelPersonAssignments();
   const { data: hotels } = useTournaments();
@@ -261,7 +261,7 @@ function HotelPersonsTab({ users, isLoading, toast }: { users: any[]; isLoading:
   return (
     <>
       <div className="flex items-center justify-between mb-3 px-0.5">
-        <p className="text-[13.5px] font-bold">Hotel Persons</p>
+        <p className="text-[13.5px] font-bold">Hotel Coordinators</p>
         <button onClick={generate} disabled={createCred.isPending}
           className="m-grad-accent m-glow inline-flex items-center gap-1.5 h-[36px] px-3.5 rounded-full text-[12.5px] font-bold text-white">
           <Plus className="w-4 h-4" /> Generate
@@ -269,7 +269,7 @@ function HotelPersonsTab({ users, isLoading, toast }: { users: any[]; isLoading:
       </div>
 
       {isLoading ? <CardSkeletons count={3} height={120} />
-        : accounts.length === 0 ? <EmptyState icon={<Settings className="w-6 h-6" />} title="No hotel persons" hint="Tap Generate to create one" />
+        : accounts.length === 0 ? <EmptyState icon={<Settings className="w-6 h-6" />} title="No hotel coordinators" hint="Tap Generate to create one" />
         : (
           <div className="space-y-[11px]">
             {accounts.map((u) => {
@@ -282,7 +282,7 @@ function HotelPersonsTab({ users, isLoading, toast }: { users: any[]; isLoading:
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[14.5px] font-bold font-mono truncate">{u.credentialUsername || u.name}</p>
-                      <p className="text-[12px] text-[var(--m-muted)]">Hotel person account</p>
+                      <p className="text-[12px] text-[var(--m-muted)]">Hotel coordinator account</p>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-3">

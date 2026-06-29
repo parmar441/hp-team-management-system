@@ -35,7 +35,7 @@ export default function AdminPage() {
     { id: "areas", label: "Area Assignments", icon: <MapPin className="w-4 h-4" /> },
     { id: "audit", label: "Audit Log", icon: <ClipboardList className="w-4 h-4" /> },
     { id: "credentials", label: "Credentials", icon: <KeyRound className="w-4 h-4" /> },
-    { id: "hotel-persons", label: "Hotel Persons", icon: <Hotel className="w-4 h-4" /> },
+    { id: "hotel-persons", label: "Hotel Coordinators", icon: <Hotel className="w-4 h-4" /> },
   ];
 
   return (
@@ -81,6 +81,7 @@ export default function AdminPage() {
 }
 
 const ROLES = ["user", "admin", "zone_lead", "area_lead", "hotel_person"] as const;
+const roleLabel = (r: string) => (r === "hotel_person" ? "Hotel Coordinator" : r.replace(/_/g, " "));
 
 function UsersTab() {
   const toast = useToast();
@@ -167,7 +168,7 @@ function UsersTab() {
             disabled={bulkImport.isPending}
             className="flex items-center gap-2 border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 rounded-xl px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50"
           >
-            <Upload className="w-4 h-4" /> <span className="hidden sm:inline">{bulkImport.isPending ? "Importing…" : "Import CSV"}</span>
+            <Upload className="w-4 h-4" /> <span className="hidden sm:inline">{bulkImport.isPending ? "Importing…" : "Choose CSV"}</span>
           </button>
           <button
             onClick={() => { setShowCreate((v) => !v); setShowCreatePw(false); }}
@@ -217,7 +218,7 @@ function UsersTab() {
                 </SelectTrigger>
                 <SelectContent>
                   {ROLES.map((r) => (
-                    <SelectItem key={r} value={r}>{r.replace(/_/g, " ")}</SelectItem>
+                    <SelectItem key={r} value={r}>{roleLabel(r)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -322,7 +323,7 @@ function UsersTab() {
                         value={u.role}
                         onValueChange={(role) =>
                           updateRole.mutate({ id: u._id, role }, {
-                            onSuccess: () => toast.success(`Role updated to "${role.replace(/_/g, " ")}"`),
+                            onSuccess: () => toast.success(`Role updated to "${roleLabel(role)}"`),
                             onError: () => toast.error("Failed to update role"),
                           })
                         }
@@ -332,7 +333,7 @@ function UsersTab() {
                         </SelectTrigger>
                         <SelectContent>
                           {ROLES.map((r) => (
-                            <SelectItem key={r} value={r}>{r.replace(/_/g, " ")}</SelectItem>
+                            <SelectItem key={r} value={r}>{roleLabel(r)}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -778,7 +779,7 @@ function CredentialsTab() {
               <SelectContent>
                 {(users ?? []).map((u: any) => (
                   <SelectItem key={u._id} value={u._id}>
-                    {u.name || u.email || u.openId} ({u.role})
+                    {u.name || u.email || u.openId} ({roleLabel(u.role)})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -841,10 +842,10 @@ function HotelPersonsTab() {
     e.preventDefault();
     try {
       await createCredential.mutateAsync(credForm);
-      toast.success(`Hotel person "${credForm.username}" created`);
+      toast.success(`Hotel coordinator "${credForm.username}" created`);
       setCredForm({ username: "", password: "" });
     } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Failed to create hotel person");
+      toast.error(err?.response?.data?.error || "Failed to create hotel coordinator");
     }
   }
 
@@ -864,7 +865,7 @@ function HotelPersonsTab() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Generate Credentials */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-1">Create Hotel Person Account</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">Create Hotel Coordinator Account</h3>
           <p className="text-xs text-gray-400 mb-4">Creates a new hotel_person user with login credentials.</p>
           <form onSubmit={handleCreateCredential} className="space-y-3">
             <input
@@ -895,11 +896,11 @@ function HotelPersonsTab() {
         {/* Assign Hotel */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <h3 className="text-sm font-semibold text-gray-900 mb-1">Assign Hotel to Person</h3>
-          <p className="text-xs text-gray-400 mb-4">Link a hotel person to a specific hotel they manage.</p>
+          <p className="text-xs text-gray-400 mb-4">Link a hotel coordinator to a specific hotel they manage.</p>
           <form onSubmit={handleAssignHotel} className="space-y-3">
             <Select value={assignForm.userId} onValueChange={(v) => setAssignForm((f) => ({ ...f, userId: v }))}>
               <SelectTrigger className="rounded-xl border-gray-200 text-sm h-[42px]">
-                <SelectValue placeholder="Select hotel person" />
+                <SelectValue placeholder="Select hotel coordinator" />
               </SelectTrigger>
               <SelectContent>
                 {hotelPersonUsers.map((u: any) => (
@@ -931,12 +932,12 @@ function HotelPersonsTab() {
       {/* Assignments Table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-5 py-3.5 border-b border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-900">Hotel Person Assignments</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Hotel Coordinator Assignments</h3>
         </div>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50/80 border-b border-gray-100">
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Hotel Person</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Hotel Coordinator</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Hotel</th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
             </tr>
@@ -972,10 +973,10 @@ function HotelPersonsTab() {
         </table>
       </div>
 
-      {/* All Hotel Persons */}
+      {/* All Hotel Coordinators */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-5 py-3.5 border-b border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-900">All Hotel Persons</h3>
+          <h3 className="text-sm font-semibold text-gray-900">All Hotel Coordinators</h3>
         </div>
         <table className="w-full text-sm">
           <thead>
@@ -987,7 +988,7 @@ function HotelPersonsTab() {
           </thead>
           <tbody className="divide-y divide-gray-50">
             {hotelPersonUsers.length === 0 ? (
-              <tr><td colSpan={3} className="px-4 py-10 text-center text-sm text-gray-400">No hotel persons created yet</td></tr>
+              <tr><td colSpan={3} className="px-4 py-10 text-center text-sm text-gray-400">No hotel coordinators created yet</td></tr>
             ) : hotelPersonUsers.map((u: any) => {
               const userAssignments = (assignments ?? []).filter((a: any) => a.userId?._id === u._id);
               return (
@@ -1046,7 +1047,7 @@ function HotelPersonsTab() {
                       <button
                         onClick={() => setDeletePersonId(u._id)}
                         className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
-                        title="Delete hotel person"
+                        title="Delete hotel coordinator"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -1063,7 +1064,7 @@ function HotelPersonsTab() {
         open={deleteAssignId !== null}
         onOpenChange={(open) => !open && setDeleteAssignId(null)}
         title="Remove Hotel Assignment"
-        description="This hotel person will no longer have access to this hotel."
+        description="This hotel coordinator will no longer have access to this hotel."
         confirmLabel="Remove"
         onConfirm={() => {
           if (!deleteAssignId) return;
@@ -1078,14 +1079,14 @@ function HotelPersonsTab() {
       <ConfirmDialog
         open={deletePersonId !== null}
         onOpenChange={(open) => !open && setDeletePersonId(null)}
-        title="Delete Hotel Person"
-        description="This will permanently delete this hotel person account and all their hotel assignments. They will no longer be able to log in."
+        title="Delete Hotel Coordinator"
+        description="This will permanently delete this hotel coordinator account and all their hotel assignments. They will no longer be able to log in."
         confirmLabel="Delete Account"
         onConfirm={() => {
           if (!deletePersonId) return;
           deleteCredential.mutate(deletePersonId, {
-            onSuccess: () => { toast.success("Hotel person deleted"); setDeletePersonId(null); },
-            onError: () => { toast.error("Failed to delete hotel person"); setDeletePersonId(null); },
+            onSuccess: () => { toast.success("Hotel coordinator deleted"); setDeletePersonId(null); },
+            onError: () => { toast.error("Failed to delete hotel coordinator"); setDeletePersonId(null); },
           });
         }}
         loading={deleteCredential.isPending}

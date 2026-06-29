@@ -86,7 +86,7 @@ export default function MHotels() {
               <Download className="w-[18px] h-[18px] text-[var(--m-text)]" />
             </HeaderIconBtn>
             <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleImport} />
-            <HeaderIconBtn onClick={() => fileRef.current?.click()} label="Import CSV">
+            <HeaderIconBtn onClick={() => fileRef.current?.click()} label="Choose CSV">
               <Upload className="w-[18px] h-[18px] text-[var(--m-text)]" />
             </HeaderIconBtn>
             <IconButton onClick={() => setOpen(true)} aria-label="Add hotel"><Plus className="w-5 h-5" /></IconButton>

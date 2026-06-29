@@ -277,7 +277,7 @@ export default function TournamentsPage() {
             disabled={createTournament.isPending}
             className="inline-flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 text-sm font-medium transition-colors disabled:opacity-50"
           >
-            <Upload className="w-4 h-4" /> <span className="hidden sm:inline">Import CSV</span>
+            <Upload className="w-4 h-4" /> <span className="hidden sm:inline">{createTournament.isPending ? "Importing…" : "Choose CSV"}</span>
           </button>
           <button
             onClick={() => setShowCreate(true)}
