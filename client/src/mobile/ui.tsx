@@ -1,5 +1,6 @@
 import * as React from "react";
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -228,7 +229,10 @@ export function Sheet({ open, onClose, title, children, footer }: {
   }, [open, onClose]);
 
   if (!open) return null;
-  return (
+  // Render into the .m-app root so the sheet always anchors to the viewport,
+  // never to a scrolled/transformed ancestor inside a screen.
+  const host = (typeof document !== "undefined" && document.querySelector(".m-app")) || null;
+  const content = (
     <div className="absolute inset-0 z-50 flex flex-col justify-end">
       <div className="m-scrim absolute inset-0 bg-black/55" onClick={onClose} />
       <div
@@ -257,6 +261,7 @@ export function Sheet({ open, onClose, title, children, footer }: {
       </div>
     </div>
   );
+  return host ? createPortal(content, host) : content;
 }
 
 /* ──────────────────────────────────────────────────────────────
