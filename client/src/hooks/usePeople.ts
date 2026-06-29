@@ -36,6 +36,7 @@ export interface PeopleFilters {
   gender?: string;
   country?: string;
   acoNeeded?: string;
+  checkedIn?: string;
   page?: number;
   pageSize?: number;
 }

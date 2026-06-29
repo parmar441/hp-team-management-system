@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { usePeople, useCreatePerson, useUpdatePerson, useDeletePerson, useToggleAco, useBulkDeletePeople, type Person } from "../hooks/usePeople";
-import { useDynamicZoneNames } from "../hooks/useDynamicZones";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { ConfirmDialog } from "../components/ui/confirm-dialog";
 import { useToast } from "../components/ui/toaster";
 import { PageContainer, PageHeader } from "../components/ui/page";
+import { PeopleFilterBar, EMPTY_PFILTERS, type PFilters } from "../components/ui/people-filters";
 import { useDebounce } from "../hooks/useDebounce";
-import { Users, Download, Trash2, Edit2, Search, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { Users, Download, Trash2, Edit2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 
 const EMPTY_PERSON: Partial<Person> = {
   firstName: "", lastName: "", email: "", phone: "", city: "", state: "", country: "",
@@ -126,8 +126,7 @@ export default function PeoplePage() {
   const toast = useToast();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [zoneFilter, setZoneFilter] = useState("");
-  const [acoFilter, setAcoFilter] = useState("");
+  const [filters, setFilters] = useState<PFilters>(EMPTY_PFILTERS);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showForm, setShowForm] = useState(false);
   const [editPerson, setEditPerson] = useState<Person | null>(null);
@@ -135,9 +134,11 @@ export default function PeoplePage() {
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   const debouncedSearch = useDebounce(search, 350);
-  const filters = { search: debouncedSearch, zone: zoneFilter, acoNeeded: acoFilter, page, pageSize: 50 };
-  const { data, isLoading } = usePeople(filters);
-  const { data: zoneNames } = useDynamicZoneNames();
+  const query = {
+    search: debouncedSearch, zone: filters.zone, area: filters.area, gender: filters.gender,
+    country: filters.country, acoNeeded: filters.aco, checkedIn: filters.checkedIn, page, pageSize: 50,
+  };
+  const { data, isLoading } = usePeople(query);
 
   const createPerson = useCreatePerson();
   const updatePerson = useUpdatePerson();
@@ -166,7 +167,7 @@ export default function PeoplePage() {
     toast.success("CSV exported");
   }
 
-  const hasFilters = search || zoneFilter || acoFilter;
+  const hasFilters = !!search || Object.values(filters).some(Boolean);
 
   return (
     <PageContainer>
@@ -194,30 +195,9 @@ export default function PeoplePage() {
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
-        <div className="flex gap-2">
-          <Select value={zoneFilter || "all"} onValueChange={(v) => { setZoneFilter(v === "all" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="flex-1 sm:w-40 rounded-xl border-gray-200 text-sm min-w-0">
-              <Filter className="w-3.5 h-3.5 mr-1 text-gray-400 flex-shrink-0" />
-              <SelectValue placeholder="All zones" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All zones</SelectItem>
-              {(zoneNames ?? []).map((z: string) => <SelectItem key={z} value={z}>{z}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={acoFilter || "all"} onValueChange={(v) => { setAcoFilter(v === "all" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="flex-1 sm:w-36 rounded-xl border-gray-200 text-sm min-w-0">
-              <SelectValue placeholder="ACO" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All players</SelectItem>
-              <SelectItem value="Yes">ACO only</SelectItem>
-              <SelectItem value="No">Non-ACO</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <PeopleFilterBar value={filters} onChange={(v) => { setFilters(v); setPage(1); }} />
         {hasFilters && (
-          <button onClick={() => { setSearch(""); setZoneFilter(""); setAcoFilter(""); setPage(1); }}
+          <button onClick={() => { setSearch(""); setFilters(EMPTY_PFILTERS); setPage(1); }}
             className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 whitespace-nowrap">
             Clear filters
           </button>

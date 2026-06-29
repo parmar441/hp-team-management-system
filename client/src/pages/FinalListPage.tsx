@@ -1,15 +1,14 @@
 import { useState } from "react";
 import { useAssignments } from "../hooks/useAssignments";
-import { useDynamicZoneNames } from "../hooks/useDynamicZones";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { PeopleFilterBar, EMPTY_PFILTERS, type PFilters } from "../components/ui/people-filters";
 import { useDebounce } from "../hooks/useDebounce";
 import { FileText, Download, Search } from "lucide-react";
 
 export default function FinalListPage() {
   const { data: slots, isLoading } = useAssignments();
-  const { data: zoneNames } = useDynamicZoneNames();
   const [search, setSearch] = useState("");
-  const [zoneFilter, setZoneFilter] = useState("");
+  const [filters, setFilters] = useState<PFilters>(EMPTY_PFILTERS);
   const [hotelFilter, setHotelFilter] = useState("");
   const debouncedSearch = useDebounce(search, 350);
 
@@ -34,6 +33,8 @@ export default function FinalListPage() {
         hotelName: hotel?.name || "",
         roomNumber: slot.roomNumber || "",
         mandal: member.mandal || "",
+        country: member.country || "",
+        checkedIn: member.checkedIn === "Yes" ? "Yes" : "No",
       });
     });
   });
@@ -43,7 +44,11 @@ export default function FinalListPage() {
       const s = debouncedSearch.toLowerCase();
       if (!row.fullName.toLowerCase().includes(s) && !row.mandal.toLowerCase().includes(s)) return false;
     }
-    if (zoneFilter && row.zone !== zoneFilter) return false;
+    if (filters.zone && row.zone !== filters.zone) return false;
+    if (filters.area && row.area !== filters.area) return false;
+    if (filters.gender && row.gender !== filters.gender) return false;
+    if (filters.country && row.country.toLowerCase() !== filters.country.toLowerCase()) return false;
+    if (filters.checkedIn && row.checkedIn !== filters.checkedIn) return false;
     if (hotelFilter && row.hotelName !== hotelFilter) return false;
     return true;
   });
@@ -92,18 +97,10 @@ export default function FinalListPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="flex gap-2">
-          <Select value={zoneFilter} onValueChange={(v) => setZoneFilter(v === "all" ? "" : v)}>
-            <SelectTrigger className="flex-1 sm:w-40 rounded-xl border-gray-200 text-sm">
-              <SelectValue placeholder="All zones" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All zones</SelectItem>
-              {(zoneNames ?? []).map((z: string) => <SelectItem key={z} value={z}>{z}</SelectItem>)}
-            </SelectContent>
-          </Select>
+        <div className="flex flex-wrap items-center gap-2">
+          <PeopleFilterBar value={filters} onChange={setFilters} hide={["aco"]} />
           <Select value={hotelFilter} onValueChange={(v) => setHotelFilter(v === "all" ? "" : v)}>
-            <SelectTrigger className="flex-1 sm:w-40 rounded-xl border-gray-200 text-sm">
+            <SelectTrigger className="w-40 rounded-xl border-gray-200 text-sm">
               <SelectValue placeholder="All hotels" />
             </SelectTrigger>
             <SelectContent>

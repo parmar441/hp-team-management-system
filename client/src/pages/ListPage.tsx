@@ -1,18 +1,19 @@
 import { useState } from "react";
 import { usePeople, type Person } from "../hooks/usePeople";
-import { useDynamicZoneNames } from "../hooks/useDynamicZones";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { PeopleFilterBar, EMPTY_PFILTERS, type PFilters } from "../components/ui/people-filters";
 import { useDebounce } from "../hooks/useDebounce";
 import { List, Download, Search, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function ListPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [zoneFilter, setZoneFilter] = useState("");
+  const [filters, setFilters] = useState<PFilters>(EMPTY_PFILTERS);
 
   const debouncedSearch = useDebounce(search, 350);
-  const { data, isLoading } = usePeople({ acoNeeded: "Yes", search: debouncedSearch, zone: zoneFilter, page, pageSize: 50 });
-  const { data: zoneNames } = useDynamicZoneNames();
+  const { data, isLoading } = usePeople({
+    acoNeeded: "Yes", search: debouncedSearch, zone: filters.zone, area: filters.area,
+    gender: filters.gender, country: filters.country, checkedIn: filters.checkedIn, page, pageSize: 50,
+  });
 
   const people: Person[] = data?.people ?? [];
   const total = data?.total ?? 0;
@@ -63,15 +64,7 @@ export default function ListPage() {
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
-        <Select value={zoneFilter} onValueChange={(v) => { setZoneFilter(v === "all" ? "" : v); setPage(1); }}>
-          <SelectTrigger className="w-full sm:w-44 rounded-xl border-gray-200">
-            <SelectValue placeholder="All zones" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All zones</SelectItem>
-            {(zoneNames ?? []).map((z: string) => <SelectItem key={z} value={z}>{z}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <PeopleFilterBar value={filters} onChange={(v) => { setFilters(v); setPage(1); }} hide={["aco"]} />
       </div>
 
       {/* Table */}

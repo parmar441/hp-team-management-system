@@ -12,7 +12,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 // GET /api/people
 router.get("/", scopeByRole, async (req: Request, res: Response): Promise<void> => {
   try {
-    const { search, zone, area, gender, country, acoNeeded, page = "1", pageSize = "50" } = req.query as Record<string, string>;
+    const { search, zone, area, gender, country, acoNeeded, checkedIn, page = "1", pageSize = "50" } = req.query as Record<string, string>;
     const query: Record<string, any> = {};
 
     if (search) {
@@ -38,6 +38,7 @@ router.get("/", scopeByRole, async (req: Request, res: Response): Promise<void> 
     if (gender) query.gender = gender;
     if (country) query.country = new RegExp(country, "i");
     if (acoNeeded) query.acoNeeded = acoNeeded;
+    if (checkedIn) query.checkedIn = checkedIn;
 
     const pageNum = parseInt(page, 10);
     const pageSizeNum = Math.min(parseInt(pageSize, 10), 200);
