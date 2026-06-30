@@ -5,6 +5,7 @@ import { Team } from "../models/Team.js";
 import { requireAdmin, scopeByRole } from "../middleware/auth.js";
 import { logAudit } from "../helpers/auditLog.js";
 import { classifyPersonZone, classifyPersonArea } from "../helpers/zoneClassifier.js";
+import { safeSearchRegex } from "../helpers/regex.js";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -16,7 +17,7 @@ router.get("/", scopeByRole, async (req: Request, res: Response): Promise<void> 
     const query: Record<string, any> = {};
 
     if (search) {
-      const regex = new RegExp(search, "i");
+      const regex = safeSearchRegex(search);
       query.$or = [{ firstName: regex }, { lastName: regex }, { name: regex }, { email: regex }];
     }
 
@@ -36,7 +37,7 @@ router.get("/", scopeByRole, async (req: Request, res: Response): Promise<void> 
     }
 
     if (gender) query.gender = gender;
-    if (country) query.country = new RegExp(country, "i");
+    if (country) query.country = safeSearchRegex(country);
     if (acoNeeded) query.acoNeeded = acoNeeded;
     if (checkedIn) query.checkedIn = checkedIn;
 

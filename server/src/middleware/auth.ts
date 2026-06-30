@@ -3,8 +3,7 @@ import jwt from "jsonwebtoken";
 import { ZoneAssignment } from "../models/ZoneAssignment.js";
 import { AreaAssignment } from "../models/AreaAssignment.js";
 import { HotelPersonAssignment } from "../models/HotelPersonAssignment.js";
-
-const JWT_SECRET = process.env.JWT_SECRET || "hp-team-management-secret-2024";
+import { JWT_SECRET } from "../config.js";
 
 export interface JwtPayload {
   id: string;

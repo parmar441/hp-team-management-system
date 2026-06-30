@@ -6,6 +6,7 @@ import { LeadCredential } from "../models/LeadCredential.js";
 import { ZoneAssignment } from "../models/ZoneAssignment.js";
 import { AreaAssignment } from "../models/AreaAssignment.js";
 import { requireAuth, signToken } from "../middleware/auth.js";
+import { JWT_SECRET } from "../config.js";
 
 const router = Router();
 
@@ -34,7 +35,6 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
   }
   try {
     const jwt = await import("jsonwebtoken");
-    const JWT_SECRET = process.env.JWT_SECRET || "hp-team-management-secret-2024";
     const payload = jwt.default.verify(token, JWT_SECRET) as any;
     const user = await User.findById(payload.id);
     if (!user) {
@@ -63,8 +63,10 @@ router.get("/my-assignments", requireAuth, async (req: Request, res: Response): 
 // POST /api/auth/login — username/password sign-in for credentialed users (created by an admin)
 router.post("/login", async (req: Request, res: Response): Promise<void> => {
   try {
-    const { username, password } = req.body as { username?: string; password?: string };
-    if (!username || !password) {
+    const { username, password } = req.body as { username?: unknown; password?: unknown };
+    // Require plain strings — rejects objects like {"$gt":""} that would otherwise
+    // reach the query as Mongo operators (NoSQL injection).
+    if (typeof username !== "string" || typeof password !== "string" || !username.trim() || !password) {
       res.status(400).json({ error: "Username and password are required" });
       return;
     }

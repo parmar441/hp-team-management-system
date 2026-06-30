@@ -4,6 +4,7 @@ import { Person } from "../models/Person.js";
 import { Team } from "../models/Team.js";
 import { TournamentSlot } from "../models/TournamentSlot.js";
 import { requireAuth } from "../middleware/auth.js";
+import { safeSearchRegex } from "../helpers/regex.js";
 
 const router = Router();
 
@@ -47,7 +48,7 @@ router.post("/query", requireAuth, async (req: Request, res: Response): Promise<
     const params = JSON.parse(extraction.choices[0].message.content || "{}");
 
     // Step 2: Query database
-    const regex = new RegExp(params.searchName, "i");
+    const regex = safeSearchRegex(params.searchName || "");
     const people = await Person.find({ $or: [{ firstName: regex }, { lastName: regex }, { name: regex }] }).limit(10);
 
     // Step 3: Enrich with team/hotel data

@@ -7,6 +7,7 @@ import { rateLimit } from "express-rate-limit";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import fs from "fs";
+import { IS_PROD } from "./config.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -32,12 +33,30 @@ const app = express();
 // so req.protocol reports "https" (needed to build correct OAuth redirect URIs).
 // A specific hop count (not `true`) keeps express-rate-limit happy.
 app.set("trust proxy", 1);
+// Don't advertise the framework.
+app.disable("x-powered-by");
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/hp-team-management";
+
+// ── Security headers (applied to every response, including static assets) ───────
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("X-DNS-Prefetch-Control", "off");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+  if (IS_PROD) {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  next();
+});
 
 // ── Rate Limiting ──────────────────────────────────────────────────────────────
 const generalLimiter = rateLimit({ windowMs: 60_000, max: 100 });
 const authLimiter = rateLimit({ windowMs: 60_000, max: 10 });
+// Stricter limiter for password login to slow credential brute-forcing.
+const loginLimiter = rateLimit({ windowMs: 15 * 60_000, max: 10, message: { error: "Too many login attempts. Please try again later." } });
 const writeLimiter = rateLimit({ windowMs: 60_000, max: 30 });
 const bulkLimiter = rateLimit({ windowMs: 60_000, max: 5 });
 const exportLimiter = rateLimit({ windowMs: 60_000, max: 3 });
@@ -50,11 +69,29 @@ if (hasClientBuild) {
 }
 
 // ── Middleware ─────────────────────────────────────────────────────────────────
-app.use(cors({ origin: true, credentials: true }));
+// The SPA is served same-origin by Express in production, so cross-origin
+// credentialed requests should only come from known origins — never reflect an
+// arbitrary caller's Origin while allowing cookies.
+const allowedOrigins = [process.env.APP_BASE_URL, process.env.CLIENT_URL]
+  .filter((o): o is string => !!o)
+  .map((o) => o.replace(/\/$/, ""));
+if (!IS_PROD) allowedOrigins.push("http://localhost:5173", "http://localhost:3000");
+
+app.use(
+  cors({
+    origin(origin, cb) {
+      // Allow non-browser / same-origin requests (no Origin header) and known origins.
+      if (!origin || allowedOrigins.includes(origin.replace(/\/$/, ""))) return cb(null, true);
+      return cb(null, false);
+    },
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 app.use("/api", generalLimiter);
+app.use("/api/auth/login", loginLimiter);
 
 // ── Bulk rate limiter for specific endpoints ────────────────────────────────
 app.post("/api/people/bulk-delete", bulkLimiter);
@@ -98,7 +135,10 @@ app.use((err: any, _req: any, res: any, _next: any) => {
     const field = Object.keys(err.keyPattern || {})[0] || "field";
     return res.status(400).json({ error: `Duplicate value: ${field} already exists` });
   }
-  res.status(500).json({ error: err.message || "Internal server error" });
+  // Log the real error server-side; never leak internals (stack/messages) to clients in prod.
+  console.error("Unhandled error:", err);
+  const status = typeof err.status === "number" ? err.status : 500;
+  res.status(status).json({ error: IS_PROD ? "Internal server error" : err.message || "Internal server error" });
 });
 
 // ── Health ────────────────────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ import { LeadCredential } from "../models/LeadCredential.js";
 import { HotelPersonAssignment } from "../models/HotelPersonAssignment.js";
 import { DynamicZone } from "../models/DynamicZone.js";
 import { requireAdmin } from "../middleware/auth.js";
+import { safeSearchRegex } from "../helpers/regex.js";
 
 const router = Router();
 
@@ -239,7 +240,7 @@ router.get("/audit-log", requireAdmin, async (req: Request, res: Response): Prom
     const query: Record<string, any> = {};
     if (userId) query.userId = userId;
     if (action) query.action = action;
-    if (targetName) query.targetName = new RegExp(targetName, "i");
+    if (targetName) query.targetName = safeSearchRegex(targetName);
     const pageNum = parseInt(page, 10);
     const size = Math.min(parseInt(pageSize, 10), 200);
     const [logs, total] = await Promise.all([

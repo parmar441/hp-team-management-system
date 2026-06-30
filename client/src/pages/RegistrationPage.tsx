@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/
 import { useToast } from "../components/ui/toaster";
 import { PeopleFilterBar, EMPTY_PFILTERS, type PFilters } from "../components/ui/people-filters";
 import { useDebounce } from "../hooks/useDebounce";
-import { parseCSVRow, downloadCSV, personName, genderLabel } from "../lib/utils";
+import { parseCSVRow, downloadCSV, capitalizeName, genderLabel } from "../lib/utils";
 import { UserPlus, CheckCircle, Upload, Download, Users, Plus, Search } from "lucide-react";
 
 const TEMPLATE_CSV =
@@ -262,43 +262,41 @@ export default function RegistrationPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50/80">
               <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Gender</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">FirstName</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">LastName</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">City</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Country</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Zone</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Area</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Mandal</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">State</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Country</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Gender</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Mandal</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">FamilyId</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Age Range</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">MemberId</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Utaro</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={i}>{Array.from({ length: 10 }).map((_, j) => (
+                  <tr key={i}>{Array.from({ length: 11 }).map((_, j) => (
                     <td key={j} className="px-4 py-2.5"><div className="h-4 w-20 bg-gray-100 rounded animate-pulse" /></td>
                   ))}</tr>
                 ))
               ) : people.length === 0 ? (
-                <tr><td colSpan={10} className="px-4 py-10 text-center text-sm text-gray-400">{hasFilters ? "No members match your filters." : "No members registered yet."}</td></tr>
+                <tr><td colSpan={11} className="px-4 py-10 text-center text-sm text-gray-400">{hasFilters ? "No members match your filters." : "No members registered yet."}</td></tr>
               ) : (
                 people.map((p) => (
                   <tr key={p._id} className="hover:bg-indigo-50/30 transition-colors">
-                    <td className="px-4 py-2.5 font-medium text-gray-900 whitespace-nowrap">{personName(p)}</td>
-                    <td className="px-4 py-2.5 text-gray-500">{genderLabel(p.gender)}</td>
+                    <td className="px-4 py-2.5 font-medium text-gray-900 whitespace-nowrap">{capitalizeName(p.firstName) || "—"}</td>
+                    <td className="px-4 py-2.5 font-medium text-gray-900 whitespace-nowrap">{capitalizeName(p.lastName) || "—"}</td>
                     <td className="px-4 py-2.5 text-gray-500">{p.city || "—"}</td>
-                    <td className="px-4 py-2.5 text-gray-500">{p.country || "—"}</td>
-                    <td className="px-4 py-2.5">
-                      {p.zone
-                        ? <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-700">{p.zone}</span>
-                        : <span className="text-gray-300">—</span>}
-                    </td>
-                    <td className="px-4 py-2.5 text-gray-500">{p.area || "—"}</td>
-                    <td className="px-4 py-2.5 text-gray-500">{p.mandal || "—"}</td>
                     <td className="px-4 py-2.5 text-gray-500">{p.state || "—"}</td>
+                    <td className="px-4 py-2.5 text-gray-500">{p.country || "—"}</td>
+                    <td className="px-4 py-2.5 text-gray-500">{genderLabel(p.gender)}</td>
+                    <td className="px-4 py-2.5 text-gray-500">{p.mandal || "—"}</td>
+                    <td className="px-4 py-2.5 text-gray-500">{p.familyId || "—"}</td>
                     <td className="px-4 py-2.5 text-gray-500">{p.ageRange || "—"}</td>
+                    <td className="px-4 py-2.5 text-gray-500">{p.memberId || "—"}</td>
                     <td className="px-4 py-2.5">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${p.acoNeeded === "Yes" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
                         {p.acoNeeded}
