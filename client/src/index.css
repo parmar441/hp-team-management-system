@@ -264,3 +264,32 @@ input, textarea, select, button {
 
 /* blurred scrim for sheets */
 .m-scrim-blur { backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+
+/* ════════════════════════════════════════════════════════════════
+   MOBILE LIGHT THEME — applied via `.m-app.m-light`
+   ════════════════════════════════════════════════════════════════ */
+.m-app.m-light {
+  --m-screen:       oklch(0.975 0.004 280);
+  --m-card:         oklch(1 0 0);
+  --m-card-border:  oklch(0.912 0.006 280);
+  --m-input:        oklch(0.985 0.003 280);
+  --m-input-border: oklch(0.90 0.006 280);
+  --m-sheet:        oklch(1 0 0);
+  --m-inset:        oklch(0.955 0.004 280);
+  --m-nav:          oklch(0.99 0.003 280);
+  --m-nav-border:   oklch(0.91 0.006 280);
+  --m-track:        oklch(0.91 0.006 280);
+  --m-text:         oklch(0.26 0.02 280);
+  --m-muted:        oklch(0.50 0.018 280);
+  --m-faint:        oklch(0.62 0.014 280);
+  --m-accent-soft:  rgba(124, 108, 245, 0.13);
+  --m-aco-bg:  oklch(0.93 0.06 162);  --m-aco-fg:  oklch(0.46 0.12 162);
+  --m-sky-bg:  oklch(0.93 0.05 235);  --m-sky-fg:  oklch(0.45 0.12 235);
+  --m-amber-bg: oklch(0.94 0.07 85);  --m-amber-fg: oklch(0.48 0.11 85);
+  --m-rose-bg: oklch(0.94 0.05 18);   --m-rose-fg: oklch(0.52 0.15 18);
+  --m-shadow-card: 0 1px 2px rgba(16, 24, 40, 0.06), 0 10px 26px -16px rgba(16, 24, 40, 0.14);
+  --m-shadow-pop:  0 18px 50px -16px rgba(16, 24, 40, 0.22);
+  --m-glow:        0 8px 22px -8px rgba(124, 108, 245, 0.45);
+}
+/* The white top-sheen is invisible on light cards — drop it. */
+.m-app.m-light .m-sheen { background-image: none; }

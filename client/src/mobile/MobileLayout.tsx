@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Home, Users, UsersRound, Hotel, LayoutGrid, X,
-  UserPlus, MapPin, Map, List, DoorOpen, ClipboardList, FileText, Settings, Sparkles, LogOut,
+  UserPlus, MapPin, Map, List, DoorOpen, ClipboardList, FileText, Settings, Sparkles, LogOut, Sun, Moon,
 } from "lucide-react";
+
+type Theme = "dark" | "light";
 import { useMe, useLogout } from "../hooks/useAuth";
 import { ToastProvider } from "./ui";
 
@@ -109,8 +111,9 @@ function NavButton({ active, label, icon, onClick }: { active: boolean; label: s
   );
 }
 
-function MoreSheet({ open, onClose, items, onNavigate }: {
+function MoreSheet({ open, onClose, items, onNavigate, theme, onSetTheme }: {
   open: boolean; onClose: () => void; items: NavItem[]; onNavigate: (to: string) => void;
+  theme: Theme; onSetTheme: (t: Theme) => void;
 }) {
   const { data } = useMe();
   const logout = useLogout();
@@ -150,6 +153,22 @@ function MoreSheet({ open, onClose, items, onNavigate }: {
               ))}
             </div>
           )}
+          {/* Appearance */}
+          <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--m-faint)] mt-5 mb-2 px-0.5">Appearance</p>
+          <div className="flex items-center gap-1 p-1 rounded-[14px] border"
+            style={{ background: "var(--m-card)", borderColor: "var(--m-card-border)" }}>
+            {(["light", "dark"] as Theme[]).map((t) => {
+              const on = theme === t;
+              return (
+                <button key={t} onClick={() => onSetTheme(t)}
+                  className="flex-1 h-[42px] rounded-[11px] flex items-center justify-center gap-2 text-[13.5px] font-semibold transition-colors"
+                  style={on ? { background: "var(--m-accent-soft)", color: "var(--m-accent)" } : { color: "var(--m-muted)" }}>
+                  {t === "light" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />} {t === "light" ? "Light" : "Dark"}
+                </button>
+              );
+            })}
+          </div>
+
           <button
             onClick={() => logout.mutate(undefined, { onSuccess: () => navigate("/login") })}
             className="mt-3 w-full flex items-center justify-center gap-2 h-[48px] rounded-[14px] text-[14px] font-semibold border"
@@ -168,6 +187,9 @@ export default function MobileLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [theme, setTheme] = useState<Theme>(() =>
+    (typeof localStorage !== "undefined" && (localStorage.getItem("m-theme") as Theme)) || "dark");
+  useEffect(() => { localStorage.setItem("m-theme", theme); }, [theme]);
 
   const allowed = ALLOWED[role] ?? ALLOWED.user;
   const tabs = tabsForRole(role);
@@ -185,7 +207,7 @@ export default function MobileLayout() {
   const moreActive = !tabs.some((t) => isActive(t.to, path)) && path !== "/";
 
   return (
-    <div className="m-app">
+    <div className={theme === "light" ? "m-app m-light" : "m-app"}>
       <ToastProvider>
         {/* Scrollable screen content */}
         <div
@@ -214,7 +236,8 @@ export default function MobileLayout() {
           <NavButton label="More" icon={ICON(LayoutGrid)} active={moreActive || moreOpen} onClick={() => setMoreOpen(true)} />
         </nav>
 
-        <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} items={moreItems} onNavigate={go} />
+        <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} items={moreItems} onNavigate={go}
+          theme={theme} onSetTheme={setTheme} />
       </ToastProvider>
     </div>
   );
