@@ -196,9 +196,9 @@ export default function MPeople() {
                   <Pill tone={p.acoNeeded === "Yes" ? "emerald" : "neutral"}>
                     <span className="opacity-70">Utaro</span> {p.acoNeeded}
                   </Pill>
-                  <span className="text-[12px] text-[var(--m-faint)]">
-                    {[genderLabel(p.gender), p.ageRange, p.area].filter(Boolean).join(" · ")}
-                  </span>
+                  <Pill tone="sky" className="rounded-full">{genderLabel(p.gender)}</Pill>
+                  {p.ageRange && <Pill tone="amber" className="rounded-full">{p.ageRange}</Pill>}
+                  {p.area && <span className="text-[12px] text-[var(--m-faint)]">{p.area}</span>}
                 </div>
               </div>
             );
