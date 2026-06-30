@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import { Upload, Download, Users, Plus } from "lucide-react";
-import { useCreatePerson, useBulkImportPeople, usePeople, type Person } from "../../hooks/usePeople";
+import { useCreatePerson, useBulkImportPeople, useInfinitePeople, type Person } from "../../hooks/usePeople";
 import { parseCSVRow, downloadCSV } from "../../lib/utils";
-import { Pill, ScreenHeader, IconButton, Sheet, Label, TextInput, ChipGroup, PrimaryButton, Card, CardSkeletons, EmptyState, useToast } from "../ui";
+import { Pill, ScreenHeader, IconButton, Sheet, Label, TextInput, ChipGroup, PrimaryButton, Card, CardSkeletons, EmptyState, LoadMore, useToast } from "../ui";
 
 const TEMPLATE_CSV =
   "firstName,lastName,email,phone,gender,mandal,country,ageRange,acoNeeded,city,state,memberId,familyId,category\n" +
@@ -36,9 +36,9 @@ export default function MRegistration() {
   const [form, setForm] = useState<Partial<Person>>(EMPTY);
   const [formOpen, setFormOpen] = useState(false);
 
-  const { data, isLoading } = usePeople({ pageSize: 200 });
-  const people: Person[] = data?.people ?? [];
-  const total = data?.total ?? people.length;
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfinitePeople({ pageSize: 50 });
+  const people: Person[] = data?.pages.flatMap((pg) => pg.people) ?? [];
+  const total = data?.pages[0]?.total ?? people.length;
 
   const set = (k: keyof Person, v: any) => setForm((f) => ({ ...f, [k]: v }));
   const input = (k: keyof Person) => ({
@@ -159,6 +159,7 @@ export default function MRegistration() {
                 <Pill tone={p.acoNeeded === "Yes" ? "emerald" : "neutral"}>{p.acoNeeded === "Yes" ? "ACO" : "—"}</Pill>
               </div>
             ))}
+            <LoadMore onLoadMore={() => fetchNextPage()} hasMore={!!hasNextPage} loading={isFetchingNextPage} />
           </div>
         )}
     </div>

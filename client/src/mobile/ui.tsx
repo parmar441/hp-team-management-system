@@ -159,6 +159,26 @@ export function Skeleton({ className, style }: { className?: string; style?: Rea
   return <div className={cn("m-skel", className)} style={style} />;
 }
 
+/* Infinite-scroll sentinel: calls onLoadMore when scrolled into view */
+export function LoadMore({ onLoadMore, hasMore, loading }: {
+  onLoadMore: () => void; hasMore: boolean; loading: boolean;
+}) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!hasMore) return;
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting && hasMore && !loading) onLoadMore(); },
+      { rootMargin: "300px" },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [hasMore, loading, onLoadMore]);
+  if (!hasMore) return null;
+  return <div ref={ref} className="flex justify-center py-5">{loading && <Spinner className="w-5 h-5" />}</div>;
+}
+
 /* A list of card-shaped skeletons for loading states */
 export function CardSkeletons({ count = 5, height = 92 }: { count?: number; height?: number }) {
   return (

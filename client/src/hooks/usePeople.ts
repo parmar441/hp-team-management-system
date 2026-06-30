@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 
 export interface Person {
@@ -45,6 +45,20 @@ export function usePeople(filters: PeopleFilters = {}) {
   return useQuery({
     queryKey: ["people", filters],
     queryFn: () => api.get("/people", { params: filters }).then((r) => r.data),
+  });
+}
+
+interface PeoplePage { people: Person[]; total: number; page: number; pageSize: number }
+
+/** Paged people fetch for infinite scroll (mobile lists). */
+export function useInfinitePeople(filters: PeopleFilters = {}) {
+  const pageSize = filters.pageSize ?? 50;
+  return useInfiniteQuery({
+    queryKey: ["people", "infinite", { ...filters, pageSize }],
+    queryFn: ({ pageParam }) =>
+      api.get("/people", { params: { ...filters, page: pageParam, pageSize } }).then((r) => r.data as PeoplePage),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.page * last.pageSize < last.total ? last.page + 1 : undefined),
   });
 }
 

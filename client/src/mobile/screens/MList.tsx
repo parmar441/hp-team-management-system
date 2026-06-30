@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { Download, List as ListIcon, Search } from "lucide-react";
-import { usePeople, type Person } from "../../hooks/usePeople";
+import { useInfinitePeople, type Person } from "../../hooks/usePeople";
 import { useDebounce } from "../../hooks/useDebounce";
-import { Pill, ScreenHeader, EmptyState, Spinner, useToast } from "../ui";
+import { Pill, ScreenHeader, EmptyState, Spinner, LoadMore, useToast } from "../ui";
 import { downloadCSV } from "../../lib/utils";
 
 export default function MList() {
   const toast = useToast();
   const [query, setQuery] = useState("");
   const debounced = useDebounce(query, 350);
-  const { data, isLoading } = usePeople({ search: debounced, pageSize: 200 });
-  const people: Person[] = data?.people ?? [];
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfinitePeople({ search: debounced, pageSize: 50 });
+  const people: Person[] = data?.pages.flatMap((pg) => pg.people) ?? [];
+  const total = data?.pages[0]?.total ?? people.length;
 
   function exportCSV() {
     const rows = [["Name", "Zone", "Area", "ACO"].join(",")];
@@ -21,7 +22,7 @@ export default function MList() {
 
   return (
     <div className="pt-2">
-      <ScreenHeader title="List" subtitle={`${data?.total ?? people.length} members`}
+      <ScreenHeader title="List" subtitle={`${total} members`}
         action={
           <button onClick={exportCSV} className="inline-flex items-center gap-1.5 h-[40px] px-4 rounded-full text-[13px] font-semibold border"
             style={{ borderColor: "var(--m-card-border)", color: "var(--m-text)" }}>
@@ -55,6 +56,7 @@ export default function MList() {
             })}
           </div>
         )}
+      <LoadMore onLoadMore={() => fetchNextPage()} hasMore={!!hasNextPage} loading={isFetchingNextPage} />
     </div>
   );
 }

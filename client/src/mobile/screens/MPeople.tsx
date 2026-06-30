@@ -1,16 +1,16 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   Search, SlidersHorizontal, MoreVertical, Check, X, Trash2, Eye, UserCheck, ToggleLeft,
 } from "lucide-react";
 import {
-  usePeople, useToggleAco, useToggleCheckIn, useDeletePerson,
+  useInfinitePeople, useToggleAco, useToggleCheckIn, useDeletePerson,
   useBulkDeletePeople, useBulkToggleAco, useBulkCheckIn, type Person, type PeopleFilters,
 } from "../../hooks/usePeople";
 import { useDynamicZoneNames } from "../../hooks/useDynamicZones";
 import { useDynamicAreas } from "../../hooks/useDynamicAreas";
 import { useMe } from "../../hooks/useAuth";
 import { useDebounce } from "../../hooks/useDebounce";
-import { Pill, ScreenHeader, Sheet, EmptyState, CardSkeletons, PrimaryButton, useToast } from "../ui";
+import { Pill, ScreenHeader, Sheet, EmptyState, CardSkeletons, PrimaryButton, LoadMore, useToast } from "../ui";
 
 interface Filters { zone: string; area: string; gender: string; country: string; aco: string; checkedIn: string }
 const EMPTY_FILTERS: Filters = { zone: "", area: "", gender: "", country: "", aco: "", checkedIn: "" };
@@ -64,9 +64,10 @@ export default function MPeople() {
     gender: filters.gender,
     country: filters.country,
     acoNeeded: filters.aco,
-    pageSize: 200,
+    checkedIn: filters.checkedIn,
+    pageSize: 50,
   };
-  const { data, isLoading } = usePeople(serverFilters);
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfinitePeople(serverFilters);
   const { data: zoneNames } = useDynamicZoneNames();
   const { data: areas } = useDynamicAreas();
 
@@ -77,11 +78,8 @@ export default function MPeople() {
   const bulkAco = useBulkToggleAco();
   const bulkCheckIn = useBulkCheckIn();
 
-  const all: Person[] = data?.people ?? [];
-  const people = useMemo(
-    () => (filters.checkedIn ? all.filter((p) => (p.checkedIn === "Yes" ? "Yes" : "No") === filters.checkedIn) : all),
-    [all, filters.checkedIn],
-  );
+  const people: Person[] = data?.pages.flatMap((pg) => pg.people) ?? [];
+  const total = data?.pages[0]?.total ?? people.length;
 
   const activeCount = Object.values(filters).filter(Boolean).length;
   const zoneOpts = (zoneNames ?? []).map((z: string) => ({ value: z, label: z }));
@@ -98,7 +96,7 @@ export default function MPeople() {
     <div className="pt-2">
       <ScreenHeader
         title="People"
-        subtitle={`${data?.total ?? people.length} registered members`}
+        subtitle={`${total} registered members`}
         action={
           <button onClick={() => setFilterOpen(true)} aria-label="Filters"
             className="relative w-[42px] h-[42px] rounded-[13px] flex items-center justify-center active:scale-95"
@@ -204,6 +202,7 @@ export default function MPeople() {
               </div>
             );
           })}
+          <LoadMore onLoadMore={() => fetchNextPage()} hasMore={!!hasNextPage} loading={isFetchingNextPage} />
         </div>
       )}
 
