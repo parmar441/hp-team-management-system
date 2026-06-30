@@ -7,6 +7,7 @@ import { useToast } from "../components/ui/toaster";
 import { PageContainer, PageHeader } from "../components/ui/page";
 import { PeopleFilterBar, EMPTY_PFILTERS, type PFilters } from "../components/ui/people-filters";
 import { useDebounce } from "../hooks/useDebounce";
+import { personName, genderLabel } from "../lib/utils";
 import { Users, Download, Trash2, Edit2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 
 const EMPTY_PERSON: Partial<Person> = {
@@ -54,10 +55,10 @@ function PersonForm({ initial, onSave, onCancel, loading }: {
         <Field label="Gender *">
           <Select value={form.gender} onValueChange={(v) => setForm((p) => ({ ...p, gender: v as any }))}>
             <SelectTrigger className={selectTriggerCls}><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="M">Male</SelectItem><SelectItem value="F">Female</SelectItem></SelectContent>
+            <SelectContent><SelectItem value="M">M</SelectItem><SelectItem value="F">F</SelectItem></SelectContent>
           </Select>
         </Field>
-        <Field label="ACO Needed *">
+        <Field label="Utaro Needed *">
           <Select value={form.acoNeeded} onValueChange={(v) => setForm((p) => ({ ...p, acoNeeded: v as any }))}>
             <SelectTrigger className={selectTriggerCls}><SelectValue /></SelectTrigger>
             <SelectContent><SelectItem value="Yes">Yes</SelectItem><SelectItem value="No">No</SelectItem></SelectContent>
@@ -73,8 +74,11 @@ function PersonForm({ initial, onSave, onCancel, loading }: {
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Mandal / State">
-          <input className={inputCls} value={form.mandal || ""} onChange={f("mandal")} placeholder="New Jersey" />
+        <Field label="Mandal">
+          <input className={inputCls} value={form.mandal || ""} onChange={f("mandal")} placeholder="e.g. EDISON" />
+        </Field>
+        <Field label="State">
+          <input className={inputCls} value={form.state || ""} onChange={f("state")} placeholder="New Jersey" />
         </Field>
         <Field label="City">
           <input className={inputCls} value={form.city || ""} onChange={f("city")} placeholder="City" />
@@ -261,7 +265,7 @@ export default function PeoplePage() {
                     <td className="p-3 sm:p-4">
                       <div className="flex items-center gap-2.5">
                         <div className="min-w-0">
-                          <p className="font-semibold text-gray-900 truncate">{p.fullName || `${p.firstName} ${p.lastName || ""}`.trim()}</p>
+                          <p className="font-semibold text-gray-900 truncate">{personName(p)}</p>
                           {/* Show zone/mandal inline on mobile where those columns are hidden */}
                           {(p.zone || p.mandal) && (
                             <p className="text-xs text-gray-400 mt-0.5 sm:hidden">
@@ -282,8 +286,8 @@ export default function PeoplePage() {
                     <td className="p-3 sm:p-4">
                       <AcoBadge value={p.acoNeeded}
                         onClick={() => toggleAco.mutate({ id: p._id, acoNeeded: p.acoNeeded === "Yes" ? "No" : "Yes" }, {
-                          onSuccess: () => toast.success("ACO status updated"),
-                          onError: () => toast.error("Failed to update ACO status"),
+                          onSuccess: () => toast.success("Utaro status updated"),
+                          onError: () => toast.error("Failed to update Utaro status"),
                         })}
                       />
                     </td>

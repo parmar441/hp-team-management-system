@@ -2,6 +2,7 @@ import api from "../api/client";
 import { useQuery } from "@tanstack/react-query";
 import { useDeleteTeam, type Team } from "../hooks/useTeams";
 import type { Person } from "../hooks/usePeople";
+import { personName } from "../lib/utils";
 import { UsersRound, Trash2, MapPin } from "lucide-react";
 
 export default function MyTeamsPage() {
@@ -68,7 +69,7 @@ export default function MyTeamsPage() {
 
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-medium text-gray-500">ACO Players</span>
+              <span className="text-sm font-medium text-gray-500">Utaro Players</span>
               <div className="p-2 bg-emerald-50 rounded-lg">
                 <UsersRound className="w-4 h-4 text-emerald-600" />
               </div>
@@ -146,7 +147,7 @@ export default function MyTeamsPage() {
               <ul className="space-y-1.5 mt-auto">
                 {team.members.map((m: Person) => (
                   <li key={m._id} className="text-sm text-gray-500">
-                    {`${m.firstName} ${m.lastName || ""}`.trim()}
+                    {personName(m)}
                   </li>
                 ))}
               </ul>

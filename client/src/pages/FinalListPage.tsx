@@ -3,6 +3,7 @@ import { useAssignments } from "../hooks/useAssignments";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { PeopleFilterBar, EMPTY_PFILTERS, type PFilters } from "../components/ui/people-filters";
 import { useDebounce } from "../hooks/useDebounce";
+import { personName, genderLabel } from "../lib/utils";
 import { FileText, Download, Search } from "lucide-react";
 
 export default function FinalListPage() {
@@ -25,7 +26,7 @@ export default function FinalListPage() {
         memberId: member._id,
         firstName: member.firstName,
         lastName: member.lastName || "",
-        fullName: `${member.firstName} ${member.lastName || ""}`.trim(),
+        fullName: personName(member),
         gender: member.gender,
         zone: team.zone || member.zone || "",
         area: member.area || "",
@@ -56,7 +57,7 @@ export default function FinalListPage() {
   function exportCSV() {
     const headers = ["Name", "Gender", "Zone", "Area", "Team", "Hotel", "Room", "Mandal"];
     const rows = filtered.map((r) =>
-      [r.fullName, r.gender === "M" ? "Male" : "Female", r.zone, r.area, r.teamName, r.hotelName, r.roomNumber, r.mandal].join(",")
+      [r.fullName, genderLabel(r.gender), r.zone, r.area, r.teamName, r.hotelName, r.roomNumber, r.mandal].join(",")
     );
     const csv = [headers.join(","), ...rows].join("\n");
     const a = document.createElement("a");
@@ -169,7 +170,7 @@ export default function FinalListPage() {
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         row.gender === "M" ? "bg-blue-50 text-blue-700" : "bg-purple-50 text-purple-700"
                       }`}>
-                        {row.gender === "M" ? "Male" : "Female"}
+                        {genderLabel(row.gender)}
                       </span>
                     </td>
                     <td className="hidden sm:table-cell px-4 py-3 text-gray-500 whitespace-nowrap">{row.zone || "—"}</td>

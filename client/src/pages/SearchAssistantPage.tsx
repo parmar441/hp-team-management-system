@@ -1,5 +1,6 @@
 import { useState } from "react";
 import api from "../api/client";
+import { capitalizeName } from "../lib/utils";
 import { MessageSquare, Search, Loader2, Hotel, UsersRound, MapPin, Sparkles, Send } from "lucide-react";
 
 interface SearchResult {
@@ -121,7 +122,7 @@ export default function SearchAssistantPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {result.people.map((p, i) => (
                   <div key={i} className="rounded-2xl border border-gray-100 shadow-sm bg-white p-4">
-                    <div className="font-semibold text-gray-900 mb-3">{p.name}</div>
+                    <div className="font-semibold text-gray-900 mb-3">{capitalizeName(p.name)}</div>
                     <div className="space-y-2 text-sm">
                       {p.zone && (
                         <div className="flex items-center gap-2 text-gray-500">
@@ -148,7 +149,7 @@ export default function SearchAssistantPage() {
                               ? "bg-amber-50 text-amber-700"
                               : "bg-gray-100 text-gray-500"
                           }`}>
-                            ACO: {p.acoNeeded}
+                            Utaro: {p.acoNeeded}
                           </span>
                         </div>
                       )}

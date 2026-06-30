@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { usePeople, type Person } from "../hooks/usePeople";
+import { useAvailablePeople, useCreateTeam } from "../hooks/useTeams";
 import { PeopleFilterBar, EMPTY_PFILTERS, type PFilters } from "../components/ui/people-filters";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
+import { useToast } from "../components/ui/toaster";
 import { useDebounce } from "../hooks/useDebounce";
-import { List, Download, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { personName, genderLabel } from "../lib/utils";
+import { List, Download, Search, ChevronLeft, ChevronRight, Plus, CheckCircle2 } from "lucide-react";
 
 export default function ListPage() {
+  const toast = useToast();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<PFilters>(EMPTY_PFILTERS);
@@ -18,11 +23,39 @@ export default function ListPage() {
   const people: Person[] = data?.people ?? [];
   const total = data?.total ?? 0;
 
+  // Create Team
+  const { data: availablePeople } = useAvailablePeople();
+  const createTeam = useCreateTeam();
+  const available: Person[] = availablePeople ?? [];
+  const [showCreate, setShowCreate] = useState(false);
+  const [newSelected, setNewSelected] = useState<Set<string>>(new Set());
+  const [teamSearch, setTeamSearch] = useState("");
+  const filteredAvailable = available.filter((p) =>
+    personName(p).toLowerCase().includes(teamSearch.toLowerCase())
+  );
+
+  function toggleNewSelect(id: string) {
+    setNewSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+
+  async function handleCreate() {
+    if (newSelected.size < 2 || newSelected.size > 8) return;
+    try {
+      await createTeam.mutateAsync({ members: [...newSelected] });
+      toast.success("Team created successfully");
+    } catch {
+      toast.error("Failed to create team");
+    }
+    setNewSelected(new Set());
+    setTeamSearch("");
+    setShowCreate(false);
+  }
+
   function exportCSV() {
     const headers = ["Name", "Gender", "Zone", "Area", "Mandal", "Age Range"];
     const rows = people.map((p) => [
-      `${p.firstName} ${p.lastName || ""}`.trim(),
-      p.gender === "M" ? "Male" : "Female",
+      personName(p),
+      genderLabel(p.gender),
       p.zone || "", p.area || "", p.mandal || "", p.ageRange || "",
     ].join(","));
     const csv = [headers.join(","), ...rows].join("\n");
@@ -46,11 +79,18 @@ export default function ListPage() {
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">{total} ACO players</p>
         </div>
-        <button onClick={exportCSV}
-          className="flex items-center gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium border border-gray-200 bg-white rounded-xl text-gray-700 hover:bg-gray-50 transition-colors flex-shrink-0">
-          <Download className="w-4 h-4" />
-          <span className="hidden sm:inline">Export CSV</span>
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 px-2.5 sm:px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors shadow-sm">
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Create Team</span>
+          </button>
+          <button onClick={exportCSV}
+            className="flex items-center gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium border border-gray-200 bg-white rounded-xl text-gray-700 hover:bg-gray-50 transition-colors">
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Export CSV</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -112,17 +152,17 @@ export default function ListPage() {
                   <tr key={p._id} className="hover:bg-indigo-50/30 transition-colors">
                     <td className="px-3 sm:px-4 py-3 text-gray-400 text-xs tabular-nums">{(page - 1) * 50 + idx + 1}</td>
                     <td className="px-3 sm:px-4 py-3">
-                      <p className="font-medium text-gray-900 whitespace-nowrap">{`${p.firstName} ${p.lastName || ""}`.trim()}</p>
+                      <p className="font-medium text-gray-900 whitespace-nowrap">{personName(p)}</p>
                       {/* Show key info inline on mobile where columns are hidden */}
                       <p className="text-xs text-gray-400 mt-0.5 sm:hidden">
-                        {[p.gender === "M" ? "Male" : "Female", p.zone, p.mandal].filter(Boolean).join(" · ")}
+                        {[genderLabel(p.gender), p.zone, p.mandal].filter(Boolean).join(" · ")}
                       </p>
                     </td>
                     <td className="hidden sm:table-cell px-4 py-3">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         p.gender === "M" ? "bg-blue-50 text-blue-700" : "bg-pink-50 text-pink-700"
                       }`}>
-                        {p.gender === "M" ? "Male" : "Female"}
+                        {genderLabel(p.gender)}
                       </span>
                     </td>
                     <td className="hidden sm:table-cell px-4 py-3 text-gray-500 whitespace-nowrap">{p.zone || "—"}</td>
@@ -155,6 +195,79 @@ export default function ListPage() {
           </div>
         )}
       </div>
+
+      {/* Create Team Dialog */}
+      <Dialog open={showCreate} onOpenChange={(v) => { setShowCreate(v); if (!v) { setNewSelected(new Set()); setTeamSearch(""); } }}>
+        <DialogContent className="max-w-lg rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold">Create New Team</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-500">Select 2–8 Utaro players to form a team.</p>
+
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-400"
+              placeholder="Search available players..."
+              value={teamSearch}
+              onChange={(e) => setTeamSearch(e.target.value)}
+            />
+          </div>
+
+          <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <div className="max-h-64 overflow-y-auto divide-y divide-gray-50">
+              {filteredAvailable.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-8">
+                  {available.length === 0 ? "No available Utaro players. Add people first." : "No players match your search."}
+                </p>
+              ) : (
+                filteredAvailable.map((p) => (
+                  <label key={p._id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newSelected.has(p._id)}
+                      onChange={() => toggleNewSelect(p._id)}
+                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-600 flex-shrink-0">
+                      {(p.firstName?.[0] || "?").toUpperCase()}
+                    </div>
+                    <span className="text-sm font-medium text-gray-800">{personName(p)}</span>
+                    {p.zone && <span className="ml-auto text-xs text-gray-400">{p.zone}</span>}
+                  </label>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <div className="text-sm text-gray-500">
+              {newSelected.size === 0 && <span>Select at least 2 players</span>}
+              {newSelected.size >= 2 && newSelected.size <= 8 && (
+                <span className="text-emerald-600 font-medium flex items-center gap-1">
+                  <CheckCircle2 className="w-4 h-4" /> {newSelected.size} selected
+                </span>
+              )}
+              {newSelected.size > 8 && <span className="text-red-500 font-medium">Max 8 players per team</span>}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowCreate(false); setNewSelected(new Set()); setTeamSearch(""); }}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={newSelected.size < 2 || newSelected.size > 8 || createTeam.isPending}
+                onClick={handleCreate}
+                className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors"
+              >
+                {createTeam.isPending ? "Creating..." : `Create Team (${newSelected.size})`}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

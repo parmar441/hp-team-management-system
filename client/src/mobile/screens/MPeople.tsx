@@ -10,13 +10,14 @@ import { useDynamicZoneNames } from "../../hooks/useDynamicZones";
 import { useDynamicAreas } from "../../hooks/useDynamicAreas";
 import { useMe } from "../../hooks/useAuth";
 import { useDebounce } from "../../hooks/useDebounce";
+import { personName, genderLabel } from "../../lib/utils";
 import { Pill, ScreenHeader, Sheet, EmptyState, CardSkeletons, PrimaryButton, LoadMore, useToast } from "../ui";
 
 interface Filters { zone: string; area: string; gender: string; country: string; aco: string; checkedIn: string }
 const EMPTY_FILTERS: Filters = { zone: "", area: "", gender: "", country: "", aco: "", checkedIn: "" };
 
 function fullName(p: Person) {
-  return p.fullName || `${p.firstName} ${p.lastName || ""}`.trim();
+  return personName(p);
 }
 
 function ChipRow<T extends string>({ label, options, value, onChange }: {
@@ -193,10 +194,10 @@ export default function MPeople() {
                 <div className="flex items-center gap-2 mt-2.5 flex-wrap">
                   {p.zone && <Pill tone="accent">{p.zone}</Pill>}
                   <Pill tone={p.acoNeeded === "Yes" ? "emerald" : "neutral"}>
-                    <span className="opacity-70">ACO</span> {p.acoNeeded}
+                    <span className="opacity-70">Utaro</span> {p.acoNeeded}
                   </Pill>
                   <span className="text-[12px] text-[var(--m-faint)]">
-                    {[p.area, p.gender === "M" ? "Male" : "Female"].filter(Boolean).join(" · ")}
+                    {[genderLabel(p.gender), p.ageRange, p.area].filter(Boolean).join(" · ")}
                   </span>
                 </div>
               </div>
@@ -214,8 +215,8 @@ export default function MPeople() {
           <div className="flex-1" />
           <button onClick={() => bulkCheckIn.mutate({ ids: [...selected], checkedIn: "Yes" }, { onSuccess: () => { toast("Checked in"); exitSelect(); } })}
             className="px-3 py-2 rounded-lg text-[12.5px] font-semibold" style={{ background: "var(--m-sky-bg)", color: "var(--m-sky-fg)" }}>Check in</button>
-          <button onClick={() => bulkAco.mutate({ ids: [...selected], acoNeeded: "Yes" }, { onSuccess: () => { toast("ACO set to Yes"); exitSelect(); } })}
-            className="px-3 py-2 rounded-lg text-[12.5px] font-semibold" style={{ background: "var(--m-aco-bg)", color: "var(--m-aco-fg)" }}>ACO</button>
+          <button onClick={() => bulkAco.mutate({ ids: [...selected], acoNeeded: "Yes" }, { onSuccess: () => { toast("Utaro set to Yes"); exitSelect(); } })}
+            className="px-3 py-2 rounded-lg text-[12.5px] font-semibold" style={{ background: "var(--m-aco-bg)", color: "var(--m-aco-fg)" }}>Utaro</button>
           <button onClick={() => bulkDelete.mutate([...selected], { onSuccess: () => { toast(`${selected.size} deleted`); exitSelect(); } })}
             className="px-3 py-2 rounded-lg text-[12.5px] font-semibold" style={{ background: "var(--m-rose-bg)", color: "var(--m-rose-fg)" }}>Delete</button>
         </div>
@@ -234,9 +235,9 @@ export default function MPeople() {
         }>
         {zoneOpts.length > 0 && <ChipRow label="Zone" options={zoneOpts} value={filters.zone} onChange={(v) => setF("zone", v)} />}
         {areaOpts.length > 0 && <ChipRow label="Area" options={areaOpts} value={filters.area} onChange={(v) => setF("area", v)} />}
-        <ChipRow label="Gender" options={[{ value: "M", label: "Male" }, { value: "F", label: "Female" }]} value={filters.gender} onChange={(v) => setF("gender", v)} />
+        <ChipRow label="Gender" options={[{ value: "M", label: "M" }, { value: "F", label: "F" }]} value={filters.gender} onChange={(v) => setF("gender", v)} />
         <ChipRow label="Country" options={[{ value: "USA", label: "USA" }, { value: "Canada", label: "Canada" }]} value={filters.country} onChange={(v) => setF("country", v)} />
-        <ChipRow label="ACO participation" options={[{ value: "Yes", label: "ACO player" }, { value: "No", label: "Non-ACO" }]} value={filters.aco} onChange={(v) => setF("aco", v)} />
+        <ChipRow label="Utaro participation" options={[{ value: "Yes", label: "Utaro player" }, { value: "No", label: "Non-Utaro" }]} value={filters.aco} onChange={(v) => setF("aco", v)} />
         <ChipRow label="Check-in status" options={[{ value: "Yes", label: "Checked in" }, { value: "No", label: "Not checked in" }]} value={filters.checkedIn} onChange={(v) => setF("checkedIn", v)} />
       </Sheet>
 
@@ -257,11 +258,11 @@ export default function MPeople() {
                 label={actionPerson.checkedIn === "Yes" ? "Mark not checked in" : "Check in"}
                 onClick={() => toggleCheckIn.mutate(actionPerson._id, { onSuccess: () => { toast("Check-in updated"); setActionPerson(null); } })} />
               <ActionRow icon={<ToggleLeft className="w-[18px] h-[18px]" />}
-                label={`Set ACO to ${actionPerson.acoNeeded === "Yes" ? "No" : "Yes"}`}
+                label={`Set Utaro to ${actionPerson.acoNeeded === "Yes" ? "No" : "Yes"}`}
                 onClick={() => {
                   const next = actionPerson.acoNeeded === "Yes" ? "No" : "Yes";
                   toggleAco.mutate({ id: actionPerson._id, acoNeeded: next }, {
-                    onSuccess: () => { toast(next === "No" ? "ACO set to No — removed from team" : "ACO set to Yes"); setActionPerson(null); },
+                    onSuccess: () => { toast(next === "No" ? "Utaro set to No — removed from team" : "Utaro set to Yes"); setActionPerson(null); },
                   });
                 }} />
               <ActionRow danger icon={<Trash2 className="w-[18px] h-[18px]" />} label="Delete person"
@@ -277,7 +278,7 @@ export default function MPeople() {
           onCheckIn={() => toggleCheckIn.mutate(detailPerson._id, { onSuccess: () => { toast("Check-in updated"); setDetailPerson(null); } })}
           onAco={() => {
             const next = detailPerson.acoNeeded === "Yes" ? "No" : "Yes";
-            toggleAco.mutate({ id: detailPerson._id, acoNeeded: next }, { onSuccess: () => { toast(next === "No" ? "ACO set to No — removed from team" : "ACO set to Yes"); setDetailPerson(null); } });
+            toggleAco.mutate({ id: detailPerson._id, acoNeeded: next }, { onSuccess: () => { toast(next === "No" ? "Utaro set to No — removed from team" : "Utaro set to Yes"); setDetailPerson(null); } });
           }} />}
       </Sheet>
     </div>
@@ -313,14 +314,14 @@ function PersonDetail({ p, isAdmin, onCheckIn, onAco }: {
         <p className="text-[13px] text-[var(--m-muted)]">{[p.city, p.state].filter(Boolean).join(", ") || "—"}</p>
         <div className="flex items-center gap-2 mt-3 flex-wrap justify-center">
           {p.zone && <Pill tone="accent">{p.zone}</Pill>}
-          <Pill tone={p.acoNeeded === "Yes" ? "emerald" : "neutral"}>ACO {p.acoNeeded}</Pill>
+          <Pill tone={p.acoNeeded === "Yes" ? "emerald" : "neutral"}>Utaro {p.acoNeeded}</Pill>
           <Pill tone={p.checkedIn === "Yes" ? "sky" : "neutral"}>{p.checkedIn === "Yes" ? "Checked in" : "Not checked in"}</Pill>
         </div>
       </div>
       <div>
         <Field label="Member ID" value={p.memberId} />
         <Field label="Family ID" value={p.familyId} />
-        <Field label="Gender" value={p.gender === "M" ? "Male" : "Female"} />
+        <Field label="Gender" value={genderLabel(p.gender)} />
         <Field label="Age range" value={p.ageRange} />
         <Field label="Category" value={p.category} />
         <Field label="Email" value={p.email} />

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAssignments, useUpdateAssignmentRoom } from "../hooks/useAssignments";
 import { useDynamicZoneNames } from "../hooks/useDynamicZones";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { personName } from "../lib/utils";
 import { ClipboardList, Hotel, DoorOpen, Edit2, Check, X, Download } from "lucide-react";
 
 function RoomEditor({ slotId, current, onSaved }: { slotId: string; current?: string; onSaved: () => void }) {
@@ -70,7 +71,7 @@ export default function AssignmentsPage() {
       s.roomNumber || "",
       s.teamId?.name || "",
       s.teamId?.zone || "",
-      s.teamId?.members?.map((m: any) => `${m.firstName} ${m.lastName || ""}`.trim()).join("; ") || "",
+      s.teamId?.members?.map((m: any) => personName(m)).join("; ") || "",
     ].join(","));
     const csv = [headers.join(","), ...rows].join("\n");
     const a = document.createElement("a");
@@ -168,7 +169,7 @@ export default function AssignmentsPage() {
                         </span>
                       )}
                       <p className="text-xs text-gray-500 leading-relaxed">
-                        {team?.members?.map((m: any) => `${m.firstName} ${m.lastName || ""}`.trim()).join(", ") || "No members"}
+                        {team?.members?.map((m: any) => personName(m)).join(", ") || "No members"}
                       </p>
                     </div>
                   );

@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useTeams, useAvailablePeople, useCreateTeam, useDeleteTeam, useAddTeamMembers, useRemoveTeamMembers, type Team } from "../hooks/useTeams";
+import { useTeams, useAvailablePeople, useDeleteTeam, useAddTeamMembers, useRemoveTeamMembers, type Team } from "../hooks/useTeams";
 import type { Person } from "../hooks/usePeople";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { ConfirmDialog } from "../components/ui/confirm-dialog";
 import { useToast } from "../components/ui/toaster";
-import { UsersRound, Plus, Trash2, UserMinus, UserPlus, Search, X, CheckCircle2 } from "lucide-react";
+import { personName } from "../lib/utils";
+import { UsersRound, Trash2, UserMinus, UserPlus, Search, X, CheckCircle2, AlertTriangle } from "lucide-react";
 
 function getZoneColor(zone?: string | null) {
   if (!zone) return { bg: "bg-gray-100", text: "text-gray-500" };
@@ -42,6 +42,7 @@ function TeamCard({
   const pct = (count / capacity) * 100;
   const zoneColor = getZoneColor(team.zone);
   const isFull = count >= capacity;
+  const isMixedGender = team.members.some((m) => m.gender === "M") && team.members.some((m) => m.gender === "F");
 
   function toggleSelect(id: string) {
     setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -60,7 +61,7 @@ function TeamCard({
   }
 
   const filtered = availablePeople.filter((p) =>
-    `${p.firstName} ${p.lastName}`.toLowerCase().includes(search.toLowerCase())
+    personName(p).toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -104,6 +105,14 @@ function TeamCard({
         </div>
       </div>
 
+      {/* Mixed-gender caution */}
+      {isMixedGender && (
+        <div className="mx-5 mt-3 flex items-start gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <p className="text-xs font-medium">Caution: this team mixes male and female members.</p>
+        </div>
+      )}
+
       {/* Members List */}
       <div className="px-5 py-3">
         {team.members.length === 0 ? (
@@ -116,7 +125,7 @@ function TeamCard({
                   <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold text-gray-500 flex-shrink-0">
                     {i + 1}
                   </div>
-                  <p className="text-sm font-medium text-gray-800">{`${m.firstName} ${m.lastName || ""}`.trim()}</p>
+                  <p className="text-sm font-medium text-gray-800">{personName(m)}</p>
                 </div>
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   {m.zone && <span className="text-xs text-gray-400">{m.zone}</span>}
@@ -168,7 +177,7 @@ function TeamCard({
                       onChange={() => toggleSelect(p._id)}
                       className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                     />
-                    <span className="text-sm text-gray-700">{`${p.firstName} ${p.lastName || ""}`.trim()}</span>
+                    <span className="text-sm text-gray-700">{personName(p)}</span>
                     {p.zone && <span className="text-xs text-gray-400 ml-auto">{p.zone}</span>}
                   </label>
                 ))}
@@ -215,34 +224,10 @@ export default function TeamsPage() {
   const toast = useToast();
   const { data: teams, isLoading } = useTeams();
   const { data: availablePeople } = useAvailablePeople();
-  const createTeam = useCreateTeam();
   const deleteTeam = useDeleteTeam();
-  const [showCreate, setShowCreate] = useState(false);
-  const [newSelected, setNewSelected] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState("");
   const [deleteTeamId, setDeleteTeamId] = useState<string | null>(null);
 
   const available: Person[] = availablePeople ?? [];
-  const filtered = available.filter((p) =>
-    `${p.firstName} ${p.lastName}`.toLowerCase().includes(search.toLowerCase())
-  );
-
-  function toggleNewSelect(id: string) {
-    setNewSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  }
-
-  async function handleCreate() {
-    if (newSelected.size < 2) return;
-    try {
-      await createTeam.mutateAsync({ members: [...newSelected] });
-      toast.success("Team created successfully");
-    } catch {
-      toast.error("Failed to create team");
-    }
-    setNewSelected(new Set());
-    setSearch("");
-    setShowCreate(false);
-  }
 
   const teamList = teams ?? [];
 
@@ -261,12 +246,6 @@ export default function TeamsPage() {
             {teamList.length} teams formed · {available.length} available players
           </p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors shadow-sm shadow-indigo-200"
-        >
-          <Plus className="w-4 h-4" /> Create Team
-        </button>
       </div>
 
       {/* Teams Grid */}
@@ -284,17 +263,11 @@ export default function TeamsPage() {
             <UsersRound className="w-7 h-7 text-gray-400" />
           </div>
           <h3 className="font-semibold text-gray-700 mb-1">No teams yet</h3>
-          <p className="text-sm text-gray-400 mb-5">
+          <p className="text-sm text-gray-400">
             {available.length === 0
-              ? "Add people with ACO status first, then create teams here."
-              : "Create your first team by selecting 2–8 ACO players."}
+              ? "Add people with Utaro status first, then create teams from the List page."
+              : "Head to the List page to create your first team from 2–8 Utaro players."}
           </p>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
-          >
-            <Plus className="w-4 h-4" /> Create First Team
-          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -308,79 +281,6 @@ export default function TeamsPage() {
           ))}
         </div>
       )}
-
-      {/* Create Team Dialog */}
-      <Dialog open={showCreate} onOpenChange={(v) => { setShowCreate(v); if (!v) { setNewSelected(new Set()); setSearch(""); } }}>
-        <DialogContent className="max-w-lg rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold">Create New Team</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-gray-500">Select 2–8 ACO players to form a team.</p>
-
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-400"
-              placeholder="Search available players..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
-            <div className="max-h-64 overflow-y-auto divide-y divide-gray-50">
-              {filtered.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-8">
-                  {available.length === 0 ? "No available ACO players. Add people first." : "No players match your search."}
-                </p>
-              ) : (
-                filtered.map((p) => (
-                  <label key={p._id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={newSelected.has(p._id)}
-                      onChange={() => toggleNewSelect(p._id)}
-                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-600 flex-shrink-0">
-                      {(p.firstName?.[0] || "?").toUpperCase()}
-                    </div>
-                    <span className="text-sm font-medium text-gray-800">{`${p.firstName} ${p.lastName || ""}`.trim()}</span>
-                    {p.zone && <span className="ml-auto text-xs text-gray-400">{p.zone}</span>}
-                  </label>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-2">
-            <div className="text-sm text-gray-500">
-              {newSelected.size === 0 && <span>Select at least 2 players</span>}
-              {newSelected.size >= 2 && newSelected.size <= 8 && (
-                <span className="text-emerald-600 font-medium flex items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4" /> {newSelected.size} selected
-                </span>
-              )}
-              {newSelected.size > 8 && <span className="text-red-500 font-medium">Max 8 players per team</span>}
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => { setShowCreate(false); setNewSelected(new Set()); setSearch(""); }}
-                className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                disabled={newSelected.size < 2 || newSelected.size > 8 || createTeam.isPending}
-                onClick={handleCreate}
-                className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors"
-              >
-                {createTeam.isPending ? "Creating..." : `Create Team (${newSelected.size})`}
-              </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Team Confirmation */}
       <ConfirmDialog

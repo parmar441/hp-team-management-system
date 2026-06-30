@@ -2,7 +2,7 @@ import { Fragment } from "react";
 import { Plus, X } from "lucide-react";
 
 export const FIELD_LABEL: Record<string, string> = {
-  mandal: "State (mandal)", gender: "Gender", country: "Country", ageRange: "Age range",
+  mandal: "Mandal", gender: "Gender", country: "Country", ageRange: "Age range",
 };
 
 export interface RuleLike { _id: string; field: string; matchValue: string; priority: number }

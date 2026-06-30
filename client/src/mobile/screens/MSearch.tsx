@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Send, Sparkles } from "lucide-react";
 import api from "../../api/client";
+import { capitalizeName } from "../../lib/utils";
 import { ScreenHeader, Spinner, useToast } from "../ui";
 
 interface MatchedPerson { name: string; zone?: string; area?: string; team?: string; hotel?: string; roomNumber?: string; acoNeeded?: string }
@@ -72,7 +73,7 @@ export default function MSearch() {
                       {it.people!.map((p, j) => (
                         <div key={j} className="flex items-center gap-2.5 p-2 rounded-[11px]" style={{ background: "var(--m-inset)" }}>
                           <div className="min-w-0">
-                            <p className="text-[13.5px] font-semibold truncate">{p.name}</p>
+                            <p className="text-[13.5px] font-semibold truncate">{capitalizeName(p.name)}</p>
                             <p className="text-[11.5px] text-[var(--m-faint)] truncate">{[p.zone, p.team].filter(Boolean).join(" · ") || "—"}</p>
                           </div>
                         </div>

@@ -7,6 +7,7 @@ import {
 import { useAvailableRooms } from "../../hooks/useHotelRooms";
 import type { Team } from "../../hooks/useTeams";
 import { useMe } from "../../hooks/useAuth";
+import { personName } from "../../lib/utils";
 import { ScreenHeader, Sheet, EmptyState, CardSkeletons, PrimaryButton, TextInput, Label, useToast } from "../ui";
 
 export default function MAssignments() {
@@ -105,7 +106,7 @@ function SlotSheet({ slot, tournamentId, availableTeams, onClose }: {
           <div className="rounded-[14px] p-3.5" style={{ background: "var(--m-inset)" }}>
             <p className="text-[15px] font-bold">{team.name}</p>
             <p className="text-[12.5px] text-[var(--m-muted)] mt-0.5">
-              {team.members?.map((m) => `${m.firstName} ${m.lastName || ""}`.trim()).join(", ") || "No members"}
+              {team.members?.map((m) => personName(m)).join(", ") || "No members"}
             </p>
           </div>
           <div>

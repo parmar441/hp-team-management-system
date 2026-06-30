@@ -5,6 +5,27 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Capitalize the first letter of each word, lowercasing the rest (e.g. "jOHN doe" → "John Doe"). */
+export function capitalizeName(s?: string | null): string {
+  if (!s) return "";
+  return s
+    .trim()
+    .split(/\s+/)
+    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w))
+    .join(" ");
+}
+
+/** Build a person's display name as "First Last" with each name capitalized. */
+export function personName(p: { firstName?: string; lastName?: string } | null | undefined): string {
+  if (!p) return "";
+  return `${capitalizeName(p.firstName)} ${capitalizeName(p.lastName)}`.trim();
+}
+
+/** Short gender label shown across the app: "M" / "F". */
+export function genderLabel(g?: string | null): string {
+  return g === "M" ? "M" : g === "F" ? "F" : g || "";
+}
+
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;

@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { Plus, X, UsersRound, Search, Check } from "lucide-react";
+import { X, UsersRound, Search, Check, AlertTriangle } from "lucide-react";
 import {
-  useTeams, useAvailablePeople, useCreateTeam, useDeleteTeam, useAddTeamMembers, useRemoveTeamMembers, type Team,
+  useTeams, useAvailablePeople, useDeleteTeam, useAddTeamMembers, useRemoveTeamMembers, type Team,
 } from "../../hooks/useTeams";
 import type { Person } from "../../hooks/usePeople";
 import { useMe } from "../../hooks/useAuth";
+import { personName } from "../../lib/utils";
 import { Pill, ScreenHeader, Sheet, EmptyState, CardSkeletons, PrimaryButton, useToast } from "../ui";
 
-function nm(p: Person) { return `${p.firstName} ${p.lastName || ""}`.trim(); }
+function nm(p: Person) { return personName(p); }
 
 function MemberPicker({ open, onClose, people, onConfirm, title, pending }: {
   open: boolean; onClose: () => void; people: Person[]; onConfirm: (ids: string[]) => void; title: string; pending?: boolean;
@@ -26,7 +27,7 @@ function MemberPicker({ open, onClose, people, onConfirm, title, pending }: {
           className="w-full h-[44px] pl-9 pr-3 rounded-[12px] border text-[14px] outline-none"
           style={{ background: "var(--m-input)", borderColor: "var(--m-input-border)", color: "var(--m-text)" }} />
       </div>
-      {filtered.length === 0 ? <p className="text-[13px] text-[var(--m-muted)] py-4 text-center">No available ACO players.</p> : (
+      {filtered.length === 0 ? <p className="text-[13px] text-[var(--m-muted)] py-4 text-center">No available Utaro players.</p> : (
         <div className="space-y-1.5 pb-2">
           {filtered.map((p) => {
             const on = sel.has(p._id);
@@ -53,12 +54,10 @@ export default function MTeams() {
   const isAdmin = useMe().data?.user?.role === "admin";
   const { data: teams, isLoading } = useTeams();
   const { data: available } = useAvailablePeople();
-  const createTeam = useCreateTeam();
   const deleteTeam = useDeleteTeam();
   const addMembers = useAddTeamMembers();
   const removeMembers = useRemoveTeamMembers();
 
-  const [createOpen, setCreateOpen] = useState(false);
   const [addTo, setAddTo] = useState<Team | null>(null);
 
   const list: Team[] = teams ?? [];
@@ -66,25 +65,27 @@ export default function MTeams() {
 
   return (
     <div className="pt-2">
-      <ScreenHeader title="Teams" subtitle={`${avail.length} ACO players available`}
-        action={isAdmin && (
-          <button onClick={() => setCreateOpen(true)}
-            className="m-grad-accent m-glow m-press inline-flex items-center gap-1.5 h-[40px] px-4 rounded-full text-[13px] font-bold text-white">
-            <Plus className="w-4 h-4" /> New
-          </button>
-        )} />
+      <ScreenHeader title="Teams" subtitle={`${avail.length} Utaro players available`} />
 
       {isLoading ? <CardSkeletons count={4} height={132} />
-        : list.length === 0 ? <EmptyState icon={<UsersRound className="w-6 h-6" />} title="No teams yet" hint={isAdmin ? "Tap New to form a team" : undefined} />
+        : list.length === 0 ? <EmptyState icon={<UsersRound className="w-6 h-6" />} title="No teams yet" hint={isAdmin ? "Create teams from the List screen" : undefined} />
         : (
           <div className="space-y-[11px] m-stagger">
-            {list.map((t) => (
+            {list.map((t) => {
+              const isMixedGender = t.members.some((m) => m.gender === "M") && t.members.some((m) => m.gender === "F");
+              return (
               <div key={t._id} className="m-sheen rounded-[18px] border p-[15px]" style={{ backgroundColor: "var(--m-card)", borderColor: "var(--m-card-border)", boxShadow: "var(--m-shadow-card)" }}>
                 <div className="flex items-center gap-2 mb-2.5">
                   <p className="m-serif text-[19px] font-bold flex-1 truncate">{t.name}</p>
                   {t.zone && <Pill tone="accent">{t.zone}</Pill>}
                   <span className="text-[12px] font-semibold text-[var(--m-faint)] tabular-nums">{t.members.length} / 8</span>
                 </div>
+                {isMixedGender && (
+                  <div className="flex items-start gap-2 px-3 py-2 mb-3 rounded-[12px]" style={{ background: "var(--m-aco-bg)", color: "var(--m-aco-fg)" }}>
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <p className="text-[12px] font-semibold">Caution: this team mixes male and female members.</p>
+                  </div>
+                )}
                 <div className="h-1.5 rounded-full overflow-hidden mb-3" style={{ background: "var(--m-track)" }}>
                   <div className="m-bar-fill m-grad-accent h-full rounded-full" style={{ width: `${(t.members.length / 8) * 100}%` }} />
                 </div>
@@ -110,12 +111,10 @@ export default function MTeams() {
                   </div>
                 )}
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
-
-      <MemberPicker open={createOpen} onClose={() => setCreateOpen(false)} people={avail} title="New team" pending={createTeam.isPending}
-        onConfirm={(ids) => createTeam.mutate({ members: ids }, { onSuccess: () => { toast("Team created"); setCreateOpen(false); }, onError: () => toast("Need 2–8 ACO players") })} />
 
       <MemberPicker open={!!addTo} onClose={() => setAddTo(null)} people={avail} title={`Add to ${addTo?.name ?? ""}`} pending={addMembers.isPending}
         onConfirm={(ids) => addTo && addMembers.mutate({ id: addTo._id, members: ids }, { onSuccess: () => { toast("Members added"); setAddTo(null); }, onError: () => toast("Failed to add members") })} />

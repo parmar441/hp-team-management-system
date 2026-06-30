@@ -67,7 +67,7 @@ export default function TeamLeadDashboard() {
 
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-medium text-gray-500">ACO Players</span>
+            <span className="text-sm font-medium text-gray-500">Utaro Players</span>
             <div className="p-2 bg-emerald-50 rounded-lg">
               <TrendingUp className="w-4 h-4 text-emerald-600" />
             </div>

@@ -3,8 +3,10 @@ import { useCreatePerson, useBulkImportPeople, usePeople, type Person } from "..
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { useToast } from "../components/ui/toaster";
-import { parseCSVRow, downloadCSV } from "../lib/utils";
-import { UserPlus, CheckCircle, Upload, Download, Users, Plus } from "lucide-react";
+import { PeopleFilterBar, EMPTY_PFILTERS, type PFilters } from "../components/ui/people-filters";
+import { useDebounce } from "../hooks/useDebounce";
+import { parseCSVRow, downloadCSV, personName, genderLabel } from "../lib/utils";
+import { UserPlus, CheckCircle, Upload, Download, Users, Plus, Search } from "lucide-react";
 
 const TEMPLATE_CSV =
   "firstName,lastName,email,phone,gender,mandal,country,ageRange,acoNeeded,city,state,memberId,familyId,category\n" +
@@ -40,9 +42,17 @@ export default function RegistrationPage() {
   const bulkImport = useBulkImportPeople();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const { data, isLoading } = usePeople({ pageSize: 200 });
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<PFilters>(EMPTY_PFILTERS);
+  const debouncedSearch = useDebounce(search, 350);
+
+  const { data, isLoading } = usePeople({
+    pageSize: 200, search: debouncedSearch, zone: filters.zone, area: filters.area,
+    gender: filters.gender, country: filters.country, acoNeeded: filters.aco, checkedIn: filters.checkedIn,
+  });
   const people: Person[] = data?.people ?? [];
   const total = data?.total ?? people.length;
+  const hasFilters = !!search || Object.values(filters).some(Boolean);
 
   const f = (k: keyof Person) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((p) => ({ ...p, [k]: e.target.value }));
@@ -154,11 +164,11 @@ export default function RegistrationPage() {
                 <label className="block text-sm font-medium text-gray-700">Gender *</label>
                 <Select value={form.gender} onValueChange={(v) => setForm((p) => ({ ...p, gender: v as any }))}>
                   <SelectTrigger className="rounded-xl border-gray-200"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="M">Male</SelectItem><SelectItem value="F">Female</SelectItem></SelectContent>
+                  <SelectContent><SelectItem value="M">M</SelectItem><SelectItem value="F">F</SelectItem></SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-gray-700">ACO Needed *</label>
+                <label className="block text-sm font-medium text-gray-700">Utaro Needed *</label>
                 <Select value={form.acoNeeded} onValueChange={(v) => setForm((p) => ({ ...p, acoNeeded: v as any }))}>
                   <SelectTrigger className="rounded-xl border-gray-200"><SelectValue /></SelectTrigger>
                   <SelectContent><SelectItem value="Yes">Yes</SelectItem><SelectItem value="No">No</SelectItem></SelectContent>
@@ -174,8 +184,12 @@ export default function RegistrationPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-gray-700">Mandal (State)</label>
-                <input value={form.mandal || ""} onChange={(e) => setForm((p) => ({ ...p, mandal: e.target.value, state: e.target.value }))} placeholder="e.g. EDISON, ATLANTA" className={inputCls} />
+                <label className="block text-sm font-medium text-gray-700">Mandal</label>
+                <input value={form.mandal || ""} onChange={f("mandal")} placeholder="e.g. EDISON, ATLANTA" className={inputCls} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-gray-700">State</label>
+                <input value={form.state || ""} onChange={f("state")} placeholder="e.g. New Jersey" className={inputCls} />
               </div>
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-gray-700">City</label>
@@ -216,6 +230,26 @@ export default function RegistrationPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Filters */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 sm:p-4 space-y-2 sm:space-y-0 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+        <div className="relative flex-1 min-w-0 sm:min-w-[220px]">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-400"
+            placeholder="Search by name, email, mandal..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <PeopleFilterBar value={filters} onChange={setFilters} />
+        {hasFilters && (
+          <button onClick={() => { setSearch(""); setFilters(EMPTY_PFILTERS); }}
+            className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 whitespace-nowrap">
+            Clear filters
+          </button>
+        )}
+      </div>
+
       {/* Registered members list */}
       <div className="rounded-2xl border border-gray-100 shadow-sm bg-white overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -229,32 +263,42 @@ export default function RegistrationPage() {
             <thead className="bg-gray-50/80">
               <tr>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
-                <th className="hidden sm:table-cell px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Gender</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Gender</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">City</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Country</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Zone</th>
-                <th className="hidden md:table-cell px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Mandal</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">ACO</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Area</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Mandal</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">State</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Age Range</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Utaro</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={i}>{Array.from({ length: 5 }).map((_, j) => (
+                  <tr key={i}>{Array.from({ length: 10 }).map((_, j) => (
                     <td key={j} className="px-4 py-2.5"><div className="h-4 w-20 bg-gray-100 rounded animate-pulse" /></td>
                   ))}</tr>
                 ))
               ) : people.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-10 text-center text-sm text-gray-400">No members registered yet.</td></tr>
+                <tr><td colSpan={10} className="px-4 py-10 text-center text-sm text-gray-400">{hasFilters ? "No members match your filters." : "No members registered yet."}</td></tr>
               ) : (
                 people.map((p) => (
                   <tr key={p._id} className="hover:bg-indigo-50/30 transition-colors">
-                    <td className="px-4 py-2.5 font-medium text-gray-900 whitespace-nowrap">{`${p.firstName} ${p.lastName || ""}`.trim()}</td>
-                    <td className="hidden sm:table-cell px-4 py-2.5 text-gray-500">{p.gender === "M" ? "Male" : "Female"}</td>
+                    <td className="px-4 py-2.5 font-medium text-gray-900 whitespace-nowrap">{personName(p)}</td>
+                    <td className="px-4 py-2.5 text-gray-500">{genderLabel(p.gender)}</td>
+                    <td className="px-4 py-2.5 text-gray-500">{p.city || "—"}</td>
+                    <td className="px-4 py-2.5 text-gray-500">{p.country || "—"}</td>
                     <td className="px-4 py-2.5">
                       {p.zone
                         ? <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-700">{p.zone}</span>
                         : <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="hidden md:table-cell px-4 py-2.5 text-gray-500">{p.mandal || "—"}</td>
+                    <td className="px-4 py-2.5 text-gray-500">{p.area || "—"}</td>
+                    <td className="px-4 py-2.5 text-gray-500">{p.mandal || "—"}</td>
+                    <td className="px-4 py-2.5 text-gray-500">{p.state || "—"}</td>
+                    <td className="px-4 py-2.5 text-gray-500">{p.ageRange || "—"}</td>
                     <td className="px-4 py-2.5">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${p.acoNeeded === "Yes" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
                         {p.acoNeeded}

@@ -7,7 +7,7 @@ import { ScreenHeader, Card, Pill, CardSkeletons } from "../ui";
 
 const ROWS = [
   { key: "people", label: "People", dot: "var(--m-faint)" },
-  { key: "aco",    label: "ACO",    dot: "#9ca3af" },
+  { key: "aco",    label: "Utaro",  dot: "#9ca3af" },
   { key: "teams",  label: "Teams",  dot: "var(--m-amber-fg)" },
   { key: "hotels", label: "Hotels", dot: "var(--m-sky-fg)" },
   { key: "rooms",  label: "Rooms",  dot: "var(--m-aco-fg)" },

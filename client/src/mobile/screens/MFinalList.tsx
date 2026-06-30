@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Download, FileText } from "lucide-react";
 import { useAssignments } from "../../hooks/useAssignments";
 import { ScreenHeader, EmptyState, Spinner, useToast } from "../ui";
-import { downloadCSV } from "../../lib/utils";
+import { downloadCSV, personName } from "../../lib/utils";
 
 interface Group { teamName: string; hotelName: string; room: string; members: any[]; zone: string }
 
@@ -30,7 +30,7 @@ export default function MFinalList() {
   function exportCSV() {
     const rows = [["Name", "Member ID", "Team", "Zone", "Hotel", "Room"].join(",")];
     for (const g of groups) for (const m of g.members) {
-      rows.push([`${m.firstName} ${m.lastName || ""}`.trim(), m.memberId || "", g.teamName, g.zone, g.hotelName, g.room].join(","));
+      rows.push([personName(m), m.memberId || "", g.teamName, g.zone, g.hotelName, g.room].join(","));
     }
     downloadCSV(rows.join("\n"), "final-list.csv");
     toast("Final list exported");
@@ -61,7 +61,7 @@ export default function MFinalList() {
                 </div>
                 <div className="space-y-2">
                   {g.members.map((m: any) => {
-                    const name = `${m.firstName} ${m.lastName || ""}`.trim();
+                    const name = personName(m);
                     return (
                       <div key={m._id} className="flex items-center gap-2.5">
                         <span className="text-[14px] font-semibold flex-1 truncate">{name}</span>

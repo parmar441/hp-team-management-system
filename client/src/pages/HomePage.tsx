@@ -7,7 +7,7 @@ import { Filter, Hotel } from "lucide-react";
 
 const ROWS = [
   { key: "people", label: "People", dot: "bg-slate-400" },
-  { key: "aco",    label: "ACO",    dot: "bg-gray-300" },
+  { key: "aco",    label: "Utaro",  dot: "bg-gray-300" },
   { key: "teams",  label: "Teams",  dot: "bg-amber-500" },
   { key: "hotels", label: "Hotels", dot: "bg-blue-500" },
   { key: "rooms",  label: "Rooms",  dot: "bg-emerald-500" },

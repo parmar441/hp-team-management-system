@@ -47,15 +47,15 @@ export function PeopleFilterBar({ value, onChange, hide = [] }: {
       )}
       {show("gender") && (
         <FilterSelect value={value.gender} placeholder="All genders" onChange={(v) => set("gender", v)} width="w-32"
-          options={[{ value: "M", label: "Male" }, { value: "F", label: "Female" }]} />
+          options={[{ value: "M", label: "M" }, { value: "F", label: "F" }]} />
       )}
       {show("country") && (
         <FilterSelect value={value.country} placeholder="All countries" onChange={(v) => set("country", v)} width="w-36"
           options={[{ value: "USA", label: "USA" }, { value: "Canada", label: "Canada" }, { value: "Other", label: "Other" }]} />
       )}
       {show("aco") && (
-        <FilterSelect value={value.aco} placeholder="ACO: all" onChange={(v) => set("aco", v)} width="w-32"
-          options={[{ value: "Yes", label: "ACO players" }, { value: "No", label: "Non-ACO" }]} />
+        <FilterSelect value={value.aco} placeholder="Utaro: all" onChange={(v) => set("aco", v)} width="w-32"
+          options={[{ value: "Yes", label: "Utaro players" }, { value: "No", label: "Non-Utaro" }]} />
       )}
       {show("checkedIn") && (
         <FilterSelect value={value.checkedIn} placeholder="Check-in: all" onChange={(v) => set("checkedIn", v)} width="w-40"
