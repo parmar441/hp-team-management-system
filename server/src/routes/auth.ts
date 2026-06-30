@@ -1,6 +1,8 @@
 import { Router, Request, Response } from "express";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import { User } from "../models/User.js";
+import { LeadCredential } from "../models/LeadCredential.js";
 import { ZoneAssignment } from "../models/ZoneAssignment.js";
 import { AreaAssignment } from "../models/AreaAssignment.js";
 import { requireAuth, signToken } from "../middleware/auth.js";
@@ -53,6 +55,52 @@ router.get("/my-assignments", requireAuth, async (req: Request, res: Response): 
     const zoneAssignments = await ZoneAssignment.find({ userId: req.user!.id });
     const areaAssignments = await AreaAssignment.find({ userId: req.user!.id });
     res.json({ zoneAssignments, areaAssignments });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/auth/login — username/password sign-in for credentialed users (created by an admin)
+router.post("/login", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { username, password } = req.body as { username?: string; password?: string };
+    if (!username || !password) {
+      res.status(400).json({ error: "Username and password are required" });
+      return;
+    }
+    const credential = await LeadCredential.findOne({ username: username.trim() });
+    if (!credential) {
+      res.status(401).json({ error: "Invalid username or password" });
+      return;
+    }
+    const ok = await bcrypt.compare(password, credential.passwordHash);
+    if (!ok) {
+      res.status(401).json({ error: "Invalid username or password" });
+      return;
+    }
+    const user = await User.findById(credential.userId);
+    if (!user) {
+      res.status(401).json({ error: "Invalid username or password" });
+      return;
+    }
+
+    user.lastSignedIn = new Date();
+    await user.save();
+
+    const token = signToken({
+      id: user._id.toString(),
+      openId: user.openId,
+      name: user.name ?? undefined,
+      email: user.email ?? undefined,
+      role: user.role,
+    });
+    res.cookie("session", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    res.json({ user });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

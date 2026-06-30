@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, BedDouble } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { AlertCircle, BedDouble, Loader2 } from "lucide-react";
+import { useLogin } from "../hooks/useAuth";
 
 const ERROR_MESSAGES: Record<string, string> = {
   google_not_configured: "Google sign-in isn't configured yet. Contact your administrator.",
@@ -21,7 +23,11 @@ function GoogleIcon() {
 }
 
 export default function LoginPage() {
+  const navigate = useNavigate();
+  const login = useLogin();
   const [error, setError] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get("error");
@@ -30,6 +36,21 @@ export default function LoginPage() {
 
   function signInWithGoogle() {
     window.location.href = "/api/auth/google";
+  }
+
+  async function handlePasswordLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    if (!username.trim() || !password) {
+      setError("Enter your username and password.");
+      return;
+    }
+    try {
+      await login.mutateAsync({ username: username.trim(), password });
+      navigate("/", { replace: true });
+    } catch (err: any) {
+      setError(err?.response?.data?.error || "Invalid username or password.");
+    }
   }
 
   return (
@@ -71,7 +92,7 @@ export default function LoginPage() {
 
           <div className="px-8 pt-8 pb-9">
             <h2 className="text-[1.6rem] font-bold text-white mb-1">Sign in</h2>
-            <p className="text-slate-400 text-sm mb-8">Continue with your Google account</p>
+            <p className="text-slate-400 text-sm mb-8">Use your Google account or username and password</p>
 
             {/* Error */}
             {error && (
@@ -90,6 +111,48 @@ export default function LoginPage() {
               <GoogleIcon />
               Continue with Google
             </button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3 my-6">
+              <span className="flex-1 h-px bg-white/10" />
+              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">or</span>
+              <span className="flex-1 h-px bg-white/10" />
+            </div>
+
+            {/* Username / password sign-in */}
+            <form onSubmit={handlePasswordLogin} className="space-y-3">
+              <div>
+                <label htmlFor="username" className="block text-xs font-medium text-slate-400 mb-1.5">Username</label>
+                <input
+                  id="username"
+                  type="text"
+                  autoComplete="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter your username"
+                  className="w-full px-4 py-3 rounded-xl bg-white/[0.06] border border-white/10 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-transparent transition-all"
+                />
+              </div>
+              <div>
+                <label htmlFor="password" className="block text-xs font-medium text-slate-400 mb-1.5">Password</label>
+                <input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full px-4 py-3 rounded-xl bg-white/[0.06] border border-white/10 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-transparent transition-all"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={login.isPending}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-sm text-white bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200 shadow-lg shadow-indigo-900/40"
+              >
+                {login.isPending ? (<><Loader2 className="w-4 h-4 animate-spin" /> Signing in…</>) : "Sign in"}
+              </button>
+            </form>
           </div>
         </div>
 
