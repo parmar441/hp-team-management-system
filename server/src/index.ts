@@ -124,6 +124,12 @@ app.get("/api/export/assignments-pdf", exportLimiter, async (req, res) => {
   }
 });
 
+// ── Health ────────────────────────────────────────────────────────────────────
+// Registered before the /api/* catch-all so it stays reachable.
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString(), db: mongoose.connection.readyState === 1 ? "connected" : "disconnected" });
+});
+
 // ── API 404 handler ────────────────────────────────────────────────────────────
 app.use("/api/*", (_req, res) => {
   res.status(404).json({ error: "API route not found" });
@@ -139,11 +145,6 @@ app.use((err: any, _req: any, res: any, _next: any) => {
   console.error("Unhandled error:", err);
   const status = typeof err.status === "number" ? err.status : 500;
   res.status(status).json({ error: IS_PROD ? "Internal server error" : err.message || "Internal server error" });
-});
-
-// ── Health ────────────────────────────────────────────────────────────────────
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString(), db: mongoose.connection.readyState === 1 ? "connected" : "disconnected" });
 });
 
 // ── SPA fallback (production) ──────────────────────────────────────────────────
